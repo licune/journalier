@@ -148,6 +148,7 @@ textarea:focus{outline:none;border-color:var(--lblue)}
       <button class="btn btn-out" onclick="imprimer()">🖨️ Imprimer</button>
       <button class="btn btn-org" id="btn-reg" onclick="affReg()" disabled>🌍 Classement Région</button>
       <div class="stat" id="stat">Chargez les PDFs Darwin pour alimenter les données.</div>
+      <div id="inf-reg" style="font-size:12px;margin-top:4px;width:100%;min-height:16px;line-height:1.5"></div>
     </div>
   </div>
   <div id="brief"><div id="brief-c"></div></div>
@@ -228,6 +229,7 @@ var REG = {};
 var SHOT = null; // consignes one-shot
 var mOp1='', mOp2='', mCl='';
 var rayonK = null;
+var RAYON_COMPAR_KEY = null; // rayon détecté dans le PDF Comparaison
 
 // Noms attendus pour la triple vérification
 var NOM_PG = {
@@ -389,7 +391,12 @@ function parserCompar(txt){
   for(var ci=0;ci<MAP_COMPAR.length;ci++){
     if(MAP_COMPAR[ci][0].test(txt)){ kk=MAP_COMPAR[ci][1]; break; }
   }
-  if(!kk) return;
+  if(!kk){
+    setStat('⚠ Rayon non reconnu dans le PDF Comparaison — vérifiez le fichier','err');
+    return;
+  }
+
+  RAYON_COMPAR_KEY = kk;
   REG[kk]={dtf:{ca:0,ev:0,deb:0,pan:0},mags:[]};
   var reg=REG[kk];
 
@@ -427,8 +434,42 @@ function parserCompar(txt){
   });
 
   reg.mags.sort(function(a,b){return a.rang-b.rang;});
-  var k=document.getElementById('sel').value;
-  if(k&&REG[k]) document.getElementById('btn-reg').disabled=false;
+  majBtnReg();
+}
+
+// ── Gestion bouton Classement Région ───────────────
+// Actif UNIQUEMENT si rayon sélectionné = rayon du PDF Comparaison
+function majBtnReg(){
+  var btn=document.getElementById('btn-reg');
+  var inf=document.getElementById('inf-reg');
+  var sel=document.getElementById('sel').value;
+
+  // Pas de PDF Comparaison chargé
+  if(!RAYON_COMPAR_KEY){
+    btn.disabled=true;
+    if(inf) inf.textContent='';
+    return;
+  }
+
+  var nomPDF=META[RAYON_COMPAR_KEY]?META[RAYON_COMPAR_KEY].nom:RAYON_COMPAR_KEY;
+
+  if(!sel){
+    // Aucun rayon sélectionné
+    btn.disabled=true;
+    if(inf) inf.innerHTML='<span style="color:var(--cyan)">📊 PDF Comparaison chargé : <strong>Rayon '+RAYON_COMPAR_KEY+' — '+nomPDF+'</strong></span>';
+    return;
+  }
+
+  if(sel===RAYON_COMPAR_KEY){
+    // Rayons correspondent → bouton actif
+    btn.disabled=false;
+    if(inf) inf.innerHTML='<span style="color:var(--green)">✅ Classement Région disponible pour <strong>Rayon '+RAYON_COMPAR_KEY+' — '+nomPDF+'</strong></span>';
+  } else {
+    // Rayons différents → bouton grisé + message explicite
+    var nomSel=META[sel]?META[sel].nom:sel;
+    btn.disabled=true;
+    if(inf) inf.innerHTML='<span style="color:var(--orange)">⚠ PDF Comparaison = <strong>Rayon '+RAYON_COMPAR_KEY+' ('+nomPDF+')</strong> — Rayon sélectionné = <strong>'+sel+' ('+nomSel+')</strong>. Choisissez le bon rayon pour activer le classement régional.</span>';
+  }
 }
 
 // ── Setup inputs ───────────────────────────────────
@@ -580,9 +621,9 @@ function onSel(){
   var k=document.getElementById('sel').value;
   rayonK=k||null;
   document.getElementById('btn-edt').disabled=!k;
-  document.getElementById('btn-reg').disabled=!(k&&REG[k]);
   var rs=document.getElementById('reg-s');
   if(rs) rs.style.display='none';
+  majBtnReg();
 }
 function sg(v){return v>=0?'up':'dn';}
 
@@ -654,7 +695,7 @@ function genBrief(){
   document.getElementById('brief-c').innerHTML=h;
   document.getElementById('brief').style.display='block';
   document.getElementById('brief').scrollIntoView({behavior:'smooth',block:'start'});
-  document.getElementById('btn-reg').disabled=!(k&&REG[k]);
+  majBtnReg();
 }
 
 // ── Classement Région ──────────────────────────────
