@@ -136,6 +136,10 @@ textarea:focus{outline:none;border-color:var(--lblue)}
         <div class="lbl">Rayon</div>
         <select id="sel" onchange="onSel()">
           <option value="">— Choisir un rayon —</option>
+          <optgroup label="── Vue globale ──">
+            <option value="ALI">🛒 Alimentaire (PGC + PFT)</option>
+            <option value="NALI">📦 Non Alimentaire (Bazar + EPCS + Textile)</option>
+          </optgroup>
           <optgroup label="━━━ ALIMENTAIRE ━━━">
             <option value="1">1 — PGC (groupe)</option>
             <option value="2">2 — PFT (groupe)</option>
@@ -271,7 +275,9 @@ var META={
   "64":{n:"64",nom:"Homme",par:"Textile",t:"na"},
   "65":{n:"65",nom:"Linge de Maison",par:"Textile",t:"na"},
   "66":{n:"66",nom:"Accessoires",par:"Textile",t:"na"},
-  "67":{n:"67",nom:"Bijouterie",par:"Textile",t:"na"}
+  "67":{n:"67",nom:"Bijouterie",par:"Textile",t:"na"},
+  "ALI":{n:"ALI",nom:"Alimentaire",par:"Magasin",t:"pgc"},
+  "NALI":{n:"NALI",nom:"Non Alimentaire",par:"Magasin",t:"na"}
 };
 
 var DATE_STR='',D={},REG={},SHOT=null;
@@ -656,12 +662,38 @@ function onSel(){
 }
 function sg(v){return v>=0?'up':'dn';}
 
+// ── Agrégation données catégories ─────────────────
+// Additionne les données de plusieurs rayons pour ALI et NALI
+var AGG_KEYS={
+  "ALI":["1","2"],          // PGC + PFT
+  "NALI":["3","4","6"]      // Bazar + EPCS + Textile
+};
+function getAggData(k){
+  var keys=AGG_KEYS[k]; if(!keys) return D[k]||{};
+  var totalCA=0, totalBud=0, totalStk=0, totalRupt=0;
+  var sumTauxW=0, sumDmW=0, sumEvW=0, totalW=0;
+  keys.forEach(function(rk){
+    var d=D[rk]||{}; if(!d.ca) return;
+    totalCA+=d.ca; totalBud+=d.bud;
+    totalStk+=d.stk; totalRupt+=d.rupt;
+    sumEvW+=d.ev*d.ca; sumTauxW+=d.taux*d.ca; sumDmW+=d.dm*d.ca;
+    totalW+=d.ca;
+  });
+  return{
+    ca:totalCA, bud:totalBud, stk:totalStk, rupt:totalRupt,
+    ev:totalW?sumEvW/totalW:0,
+    taux:totalW?sumTauxW/totalW:0,
+    dm:totalW?sumDmW/totalW:0,
+    rang:0, er:0
+  };
+}
+
 // ── Génération du brief ────────────────────────────
 function genBrief(){
   var k=document.getElementById('sel').value;
   if(!k){alert('Veuillez choisir un rayon.');return;}
   rayonK=k;
-  var m=META[k], d=D[k]||{};
+  var m=META[k], d=(k==='ALI'||k==='NALI')?getAggData(k):(D[k]||{});
   var c=getCons(k);
   SHOT=null; majBtnEdit();
   var al=[];
@@ -692,7 +724,7 @@ function genBrief(){
   var h=
     '<div class="b-hdr">'+
       '<div>'+
-        '<div style="font-size:11px;opacity:.65">Rayon '+m.n+' · '+m.par+' · HF7152 — Narbonne</div>'+
+        '<div style="font-size:11px;opacity:.65">'+(k==='ALI'?'PGC + PFT':k==='NALI'?'Bazar + EPCS + Textile':'Rayon '+m.n+' · '+m.par)+' · HF7152 — Narbonne</div>'+
         '<div class="b-title">'+m.nom+'</div>'+
         '<div class="b-meta">'+(DATE_STR||'—')+' — Source Darwin</div>'+
       '</div>'+
