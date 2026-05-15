@@ -390,40 +390,70 @@ function parserPerf(txt){
 }
 
 // ── Parser Classement Rayons ───────────────────────
-// CORRECTION BUG RANG (rayons 11,14,20,23,25,34,60,62,66 et autres) :
-// Darwin peut encoder sur 2 patterns selon présence de CA_ECOM :
-//   A) Pas de CA_ECOM  → ns=[NUM,CA,EV,BUD, RANG,ER, ...]
-//   B) CA_ECOM présent → ns=[NUM,CA,EV,BUD, CA_ECOM,EV_ECOM, RANG,ER, ...]
+// CAUSE RACINE du bug rang manquant :
+// Darwin affiche des barres graphiques (■ ▲ ▼) qui ont des coordonnées Y
+// légèrement différentes du texte principal. PDF.js les groupe alors sur une
+// ligne séparée. Résultat : une ligne Darwin = 2 lignes texte, et les nombres
+// de rang/er se retrouvent sur la 2e ligne, jamais lue.
 //
-// Règle fiable :
-//   ns[4] entier ∈ [1,300] ET ns[4]<100 → pattern A (rang=ns[4], er=ns[5])
-//   Sinon → pattern B (rang=ns[6], er=ns[7])
-// Les valeurs CA sont toujours décimales (ex: 8,2 / 65,2), jamais entier ≥1 en K€.
-// Exception : CA_ECOM peut être 0.0 et donc sauter, on teste aussi ns[5] en fallback.
+// FIX : après avoir trouvé une ligne rayon, fusionner les lignes suivantes
+// qui ne démarrent PAS par un code rayon (= lignes de continuation).
+//
+// Structure des colonnes Darwin (après fusion) :
+//   ns[0]=NUM  ns[1]=CA  ns[2]=EVOL%  ns[3]=BUD
+//   Si CA_ECOM présent → ns[4]=CA_ECOM  ns[5]=EVOL_ECOM%  ns[6]=RANG  ns[7]=ER
+//   Sinon              → ns[4]=RANG     ns[5]=ER
+//
+// Règle de détection :
+//   ns[4] est un entier ∈ [1,300] → pas de CA_ECOM → rang=ns[4], er=ns[5]
+//   Sinon → CA_ECOM présent       → rang=ns[6],     er=ns[7]
 function parserRayons(txt){
-  txt.split('\n').forEach(function(ligne){
-    ligne=ligne.trim(); if(!ligne) return;
-    var numM=ligne.match(RE_NUM); if(!numM) return;
+  var lines=txt.split('\n');
+  var n=lines.length;
+
+  for(var i=0;i<n;i++){
+    var ligne=lines[i].trim();
+    if(!ligne) continue;
+    var numM=ligne.match(RE_NUM); if(!numM) continue;
     var num=numM[1].toUpperCase();
-    if(!D[num]||!NOM_PG[num]) return;
-    if(ligne.toUpperCase().indexOf(NOM_PG[num])===-1) return;
-    var ns=getNums(ligne);
-    if(ns.length<6) return;
+    if(!D[num]||!NOM_PG[num]) continue;
+    if(ligne.toUpperCase().indexOf(NOM_PG[num])===-1) continue;
+
+    // ── Fusion des lignes de continuation ────────────
+    // PDF.js peut découper la ligne Darwin en 2-3 segments.
+    // On fusionne les lignes suivantes TANT QU'elles ne démarrent
+    // pas par un nouveau code rayon et contiennent des chiffres.
+    var merged=ligne;
+    for(var extra=1;extra<=3&&i+extra<n;extra++){
+      var nxt=lines[i+extra].trim();
+      if(!nxt) continue;
+      if(nxt.match(RE_NUM)) break;          // début d'un autre rayon → stop
+      if(/\d/.test(nxt)) merged+=' '+nxt;  // continuation avec des chiffres
+    }
+
+    var ns=getNums(merged);
+    if(ns.length<5) continue;
+
     var n4=ns[4]||0, n5=ns[5]||0, n6=ns[6]||0;
     var rang=0,er=0;
-    // ns[4] = entier entre 1 et 300 → pas de CA_ECOM
+
+    // ns[4] entier ∈ [1,300] → Pas de colonne CA_ECOM → Pattern A
     if(n4===Math.round(n4)&&n4>=1&&n4<=300){
       rang=Math.round(n4); er=Math.round(n5);
-    } else if(n5===Math.round(n5)&&n5>=1&&n5<=300){
-      // ns[4] décimal (CA_ECOM), ns[5] devrait être EVOL_ECOM mais si entier = rang
-      rang=Math.round(n5); er=Math.round(n6);
-    } else {
+    }
+    // Sinon CA_ECOM présent (ns[4] décimal ou 0) → Pattern B
+    else if(n6===Math.round(n6)&&n6>=1&&n6<=300){
       rang=Math.round(n6); er=Math.round(ns[7]||0);
     }
+    // Fallback : tenter n5 si c'est un entier valide
+    else if(n5===Math.round(n5)&&n5>=1&&n5<=300){
+      rang=Math.round(n5); er=Math.round(n6);
+    }
+
     var d=D[num];
     if(rang>=1&&rang<=300) d.rang=rang;
     if(er>=-300&&er<=300) d.er=er;
-  });
+  }
 }
 
 // ── Parser Comparaison Magasins ────────────────────
