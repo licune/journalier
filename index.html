@@ -136,12 +136,9 @@ textarea:focus{outline:none;border-color:var(--lblue)}
         <div class="lbl">Rayon</div>
         <select id="sel" onchange="onSel()">
           <option value="">— Choisir un rayon —</option>
-          <optgroup label="── Groupes Surface de Vente ──">
+          <optgroup label="━━━ ALIMENTAIRE ━━━">
             <option value="1">1 — PGC (groupe)</option>
             <option value="2">2 — PFT (groupe)</option>
-            <option value="3">3 — Bazar (groupe)</option>
-            <option value="4">4 — EPCS (groupe)</option>
-            <option value="6">6 — Textile (groupe)</option>
           </optgroup>
           <optgroup label="PGC — Produits Grande Consommation">
             <option value="10">10 — Boissons</option>
@@ -157,6 +154,11 @@ textarea:focus{outline:none;border-color:var(--lblue)}
             <option value="23">23 — Boulangerie / Pâtisserie</option>
             <option value="24">24 — Boucherie Volaille</option>
             <option value="25">25 — PLS (Libre Service)</option>
+          </optgroup>
+          <optgroup label="━━━ NON ALIMENTAIRE ━━━">
+            <option value="3">3 — Bazar (groupe)</option>
+            <option value="4">4 — EPCS (groupe)</option>
+            <option value="6">6 — Textile (groupe)</option>
           </optgroup>
           <optgroup label="Bazar">
             <option value="30">30 — Bricolage</option>
@@ -229,12 +231,10 @@ textarea:focus{outline:none;border-color:var(--lblue)}
 </div>
 
 <script>
-// ── PDF.js worker ──────────────────────────────────
 pdfjsLib.GlobalWorkerOptions.workerSrc =
   'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.worker.min.js';
 
-// ── Métadonnées rayons ─────────────────────────────
-var META = {
+var META={
   "1":{n:"1",nom:"PGC",par:"Alimentaire",t:"pgc"},
   "2":{n:"2",nom:"PFT",par:"Alimentaire",t:"pft"},
   "3":{n:"3",nom:"Bazar",par:"Non Alimentaire",t:"na"},
@@ -274,17 +274,14 @@ var META = {
   "67":{n:"67",nom:"Bijouterie",par:"Textile",t:"na"}
 };
 
-// ── État global ────────────────────────────────────
-var DATE_STR='', D={}, REG={}, SHOT=null;
-var mOp1='', mOp2='', mCl='';
-var rayonK=null, RAYON_COMPAR_KEY=null;
+var DATE_STR='',D={},REG={},SHOT=null;
+var mOp1='',mOp2='',mCl='';
+var rayonK=null,RAYON_COMPAR_KEY=null;
 
 Object.keys(META).forEach(function(k){
   D[k]={ca:0,ev:0,bud:0,taux:0,dm:0,rang:0,er:0,stk:0,rupt:0};
 });
 
-// ── Mots-clés de vérification par rayon ───────────
-// CORRECTIONS BUG RANG : mots-clés ajoutés pour 11,14,20,23,25,62,66
 var NOM_PG={
   "1":"PGC","2":"P.F.T","3":"BAZAR","4":"EPCS","6":"TEXTILE",
   "10":"BOISSONS","11":"DROGUERIE","12":"PARFUMERIE","14":"EPICERIE","19":"PARAPHARMACIE",
@@ -295,10 +292,9 @@ var NOM_PG={
   "65":"LINGE","66":"ACCESS","67":"BIJOUTERIE"
 };
 
-// Regex ligne — ordre décroissant longueur pour éviter que "1" matche avant "10"
 var RE_NUM=/^(10|11|12|14|19|20|21|22|23|24|25|30|31|32|33|34|35|40|41|42|43|44|45|60|61|62|63|64|65|66|67|8X|1|2|3|4|6)\s/i;
 
-// ── Lecture PDF par coordonnées Y ──────────────────
+// ── Lecture PDF ────────────────────────────────────
 function lirePDF(file){
   return new Promise(function(res,rej){
     var rd=new FileReader();
@@ -337,7 +333,6 @@ function lirePDF(file){
   });
 }
 
-// ── Utilitaires ────────────────────────────────────
 function pN(s){return parseFloat(String(s).replace(',','.'))||0;}
 function getNums(txt){
   var r=[],m,re=/(-?\d+[,.]\d+|-?\d+)/g;
@@ -354,29 +349,35 @@ function trouverDate(txt){
 }
 
 // ── Parser Performances Globales ───────────────────
-// CORRECTION BUG MARGE rayon 35 et autres :
-// Certaines lignes ont un champ POIDS_CATA% supplémentaire qui décale les colonnes.
-// On localise TAUX en cherchant le 1er nombre dans la plage [1,90] à partir de la position 5.
+// Fusion des lignes de continuation pour gérer le découpage PDF.js
 function parserPerf(txt){
   var date=trouverDate(txt);
   if(date){DATE_STR=date; document.getElementById('hdr-date').textContent=date;}
-  txt.split('\n').forEach(function(ligne){
-    ligne=ligne.trim(); if(!ligne) return;
-    var numM=ligne.match(RE_NUM); if(!numM) return;
+  var lines=txt.split('\n'), n=lines.length;
+  for(var i=0;i<n;i++){
+    var ligne=lines[i].trim(); if(!ligne) continue;
+    var numM=ligne.match(RE_NUM); if(!numM) continue;
     var num=numM[1].toUpperCase();
-    if(!D[num]||!NOM_PG[num]) return;
-    if(ligne.toUpperCase().indexOf(NOM_PG[num])===-1) return;
-    var ns=getNums(ligne);
-    if(ns.length<7) return;
+    if(!D[num]||!NOM_PG[num]) continue;
+    if(ligne.toUpperCase().indexOf(NOM_PG[num])===-1) continue;
+    var merged=ligne;
+    for(var x=1;x<=3&&i+x<n;x++){
+      var nxt=lines[i+x].trim();
+      if(!nxt) continue;
+      if(nxt.match(RE_NUM)) break;
+      if(/\d/.test(nxt)) merged+=' '+nxt;
+    }
+    var ns=getNums(merged); if(ns.length<7) continue;
     var d=D[num];
     d.ca=Math.abs(ns[1]); d.ev=ns[2]; d.bud=ns[3];
-    // CORRECTION : chercher TAUX dans ns[5..8] (plage 1-90%)
+    // Colonnes Darwin fixes : ns[4]=Poids ns[5]=Poids Cata ns[6]=Taux ns[7]=Diff%N-1
+    // On lit directement ns[6] pour éviter de confondre avec Poids Cata (ns[5])
     var taux=0,dm=0;
-    for(var ti=5;ti<=Math.min(8,ns.length-1);ti++){
-      if(ns[ti]>=1&&ns[ti]<=90){taux=ns[ti];dm=ns[ti+1]||0;break;}
-    }
+    var t6=ns[6]||0, t7=ns[7]||0;
+    if(t6>=1&&t6<=90){ taux=t6; dm=t7; }
+    else if((ns[5]||0)>=1&&(ns[5]||0)<=90){ taux=ns[5]; dm=t6; } // fallback si Poids Cata absent
     d.taux=taux; d.dm=dm;
-    // Extraire stk_neg et rupt (entiers >=0, <5000)
+    console.log('[PERF] '+num+' ca='+d.ca+' ev='+d.ev+' bud='+d.bud+' taux='+d.taux+' ns='+JSON.stringify(ns.slice(0,10)));
     var trail=[];
     for(var j=2;j<ns.length;j++){
       var v=ns[j];
@@ -386,78 +387,46 @@ function parserPerf(txt){
     else if(trail.length===2){d.stk=trail[0];d.rupt=trail[1];}
     else if(trail.length===1){d.rupt=trail[0];d.stk=0;}
     else{d.stk=0;d.rupt=0;}
-  });
+  }
 }
 
 // ── Parser Classement Rayons ───────────────────────
-// CAUSE RACINE du bug rang manquant :
-// Darwin affiche des barres graphiques (■ ▲ ▼) qui ont des coordonnées Y
-// légèrement différentes du texte principal. PDF.js les groupe alors sur une
-// ligne séparée. Résultat : une ligne Darwin = 2 lignes texte, et les nombres
-// de rang/er se retrouvent sur la 2e ligne, jamais lue.
-//
-// FIX : après avoir trouvé une ligne rayon, fusionner les lignes suivantes
-// qui ne démarrent PAS par un code rayon (= lignes de continuation).
-//
-// Structure des colonnes Darwin (après fusion) :
-//   ns[0]=NUM  ns[1]=CA  ns[2]=EVOL%  ns[3]=BUD
-//   Si CA_ECOM présent → ns[4]=CA_ECOM  ns[5]=EVOL_ECOM%  ns[6]=RANG  ns[7]=ER
-//   Sinon              → ns[4]=RANG     ns[5]=ER
-//
-// Règle de détection :
-//   ns[4] est un entier ∈ [1,300] → pas de CA_ECOM → rang=ns[4], er=ns[5]
-//   Sinon → CA_ECOM présent       → rang=ns[6],     er=ns[7]
+// CAUSE RACINE bug rang : PDF.js découpe les lignes Darwin en 2-3 segments
+// à cause des barres graphiques (▲ ▼ ■) qui ont des Y légèrement différents.
+// FIX : fusionner les lignes de continuation avant d'extraire les nombres.
 function parserRayons(txt){
-  var lines=txt.split('\n');
-  var n=lines.length;
-
+  var lines=txt.split('\n'), n=lines.length;
   for(var i=0;i<n;i++){
-    var ligne=lines[i].trim();
-    if(!ligne) continue;
+    var ligne=lines[i].trim(); if(!ligne) continue;
     var numM=ligne.match(RE_NUM); if(!numM) continue;
     var num=numM[1].toUpperCase();
     if(!D[num]||!NOM_PG[num]) continue;
     if(ligne.toUpperCase().indexOf(NOM_PG[num])===-1) continue;
-
-    // ── Fusion des lignes de continuation ────────────
-    // PDF.js peut découper la ligne Darwin en 2-3 segments.
-    // On fusionne les lignes suivantes TANT QU'elles ne démarrent
-    // pas par un nouveau code rayon et contiennent des chiffres.
     var merged=ligne;
-    for(var extra=1;extra<=3&&i+extra<n;extra++){
-      var nxt=lines[i+extra].trim();
+    for(var x=1;x<=3&&i+x<n;x++){
+      var nxt=lines[i+x].trim();
       if(!nxt) continue;
-      if(nxt.match(RE_NUM)) break;          // début d'un autre rayon → stop
-      if(/\d/.test(nxt)) merged+=' '+nxt;  // continuation avec des chiffres
+      if(nxt.match(RE_NUM)) break;
+      if(/\d/.test(nxt)) merged+=' '+nxt;
     }
-
-    var ns=getNums(merged);
-    if(ns.length<5) continue;
-
-    var n4=ns[4]||0, n5=ns[5]||0, n6=ns[6]||0;
+    var ns=getNums(merged); if(ns.length<5) continue;
+    var n4=ns[4]||0,n5=ns[5]||0,n6=ns[6]||0;
     var rang=0,er=0;
-
-    // ns[4] entier ∈ [1,300] → Pas de colonne CA_ECOM → Pattern A
     if(n4===Math.round(n4)&&n4>=1&&n4<=300){
       rang=Math.round(n4); er=Math.round(n5);
-    }
-    // Sinon CA_ECOM présent (ns[4] décimal ou 0) → Pattern B
-    else if(n6===Math.round(n6)&&n6>=1&&n6<=300){
+    } else if(n6===Math.round(n6)&&n6>=1&&n6<=300){
       rang=Math.round(n6); er=Math.round(ns[7]||0);
-    }
-    // Fallback : tenter n5 si c'est un entier valide
-    else if(n5===Math.round(n5)&&n5>=1&&n5<=300){
+    } else if(n5===Math.round(n5)&&n5>=1&&n5<=300){
       rang=Math.round(n5); er=Math.round(n6);
     }
-
     var d=D[num];
     if(rang>=1&&rang<=300) d.rang=rang;
     if(er>=-300&&er<=300) d.er=er;
+    console.log('[RAYONS] '+num+' rang='+rang+' er='+er+' ns='+JSON.stringify(ns.slice(0,8)));
   }
 }
 
 // ── Parser Comparaison Magasins ────────────────────
-// CORRECTION BUG BTN-REG : patterns élargis + détection aussi sur texte tronqué Darwin
 var MAP_COMPAR=[
   [/CONFORT\s+DE\s+LA/i,"31"],[/RADIOTELEPHONIE/i,"45"],[/POISSONNERIE/i,"21"],
   [/PARAPHARMACIE/i,"19"],[/MICRO\s+INFO/i,"44"],[/BOULANGERIE/i,"23"],
@@ -513,8 +482,7 @@ function parserCompar(txt){
   majBtnReg();
 }
 
-// ── Gestion bouton Classement Région ───────────────
-// RÈGLE STRICTE : actif UNIQUEMENT si rayon sélectionné = rayon du PDF Comparaison
+// ── Bouton Classement Région ───────────────────────
 function majBtnReg(){
   var btn=document.getElementById('btn-reg');
   var inf=document.getElementById('inf-reg');
@@ -536,7 +504,6 @@ function majBtnReg(){
   }
 }
 
-// ── Setup inputs ───────────────────────────────────
 function setupF(id,lbId,fnId,parser){
   document.getElementById(id).addEventListener('change',function(){
     var f=this.files[0]; if(!f) return;
@@ -558,7 +525,7 @@ setupF('f-r','lb-r','fn-r',parserRayons);
 setupF('f-c','lb-c','fn-c',parserCompar);
 function setStat(msg,cls){var el=document.getElementById('stat');el.textContent=msg;el.className='stat '+(cls||'');}
 
-// ── Consignes — variantes rotatives ───────────────
+// ── Consignes ──────────────────────────────────────
 function rnd(arr){return arr[Math.floor(Math.random()*arr.length)];}
 var CV={
   pgc_o1:["Contrôle DLC / DDM : Tour du rayon, retirer tout produit périmé. Priorité aux bas-de-rayon et têtes de gondole.","Vérification des dates : Parcourir l'ensemble du linéaire, écarter les produits arrivés à date. Attention aux zones basses.","Tour DLC / DDM : Retirer sans exception tout article périmé. Insister sur les emplacements difficiles d'accès."],
@@ -592,9 +559,6 @@ var CV={
 var CO={};
 Object.keys(CV).forEach(function(k){CO[k]=CV[k][0];});
 
-// CORRECTION BUG SUPPRESSION :
-// hasOwnProperty permet de détecter SHOT[k]='' (suppression intentionnelle)
-// sans confondre avec l'absence de la clé
 function lC(k){
   if(SHOT&&Object.prototype.hasOwnProperty.call(SHOT,k)) return SHOT[k];
   return CV[k]?rnd(CV[k]):(CO[k]||'');
@@ -605,15 +569,13 @@ function fmtC(s){
   return s;
 }
 function getCons(k){
-  var t=META[k]?META[k].t:'na';
-  var op=[],cl=[];
+  var t=META[k]?META[k].t:'na', op=[],cl=[];
   if(t==='pgc'){op=[lC('pgc_o1'),lC('pgc_o2'),lC('pgc_o3')];cl=[lC('pgc_c1'),lC('pgc_c2'),lC('pgc_c3')];}
   else if(t==='pls'){op=[lC('pls_o1'),lC('pls_o2'),lC('pls_o3')];cl=[lC('pls_c1'),lC('pls_c2'),lC('pls_c3')];}
   else if(t==='pft'){
     var c1=(k==='20'||k==='21'||k==='24')?lC('pft_tb'):k==='22'?lC('pft_fl'):k==='23'?lC('pft_bo'):lC('pft_dl');
     op=[c1,lC('pft_o2'),lC('pft_o3')];cl=[lC('pft_c1'),lC('pft_c2'),lC('pft_c3')];
   } else {op=[lC('na_o1'),lC('na_o2'),lC('na_o3')];cl=[lC('na_c1'),lC('na_c2'),lC('na_c3')];}
-  // Filtrer les consignes vides (supprimées via SHOT[k]='')
   return{op:op.filter(function(x){return x!=='';}),cl:cl.filter(function(x){return x!=='';})};
 }
 
@@ -671,8 +633,7 @@ var MSG_NEG=[
   {t:"Point d'amélioration :",s:"L'écart au budget persiste — chaque vente compte pour rattraper le retard."}
 ];
 function buildClosing(d){
-  var pos=rnd(MSG_POS);
-  var neg=null;
+  var pos=rnd(MSG_POS), neg=null;
   if(d.stk>20) neg=MSG_NEG[0];
   else if(d.rupt>50) neg=MSG_NEG[1];
   else if(d.ev<-10) neg=MSG_NEG[2];
@@ -685,7 +646,6 @@ function buildClosing(d){
     '<div class="closing"><div class="cl-ico">🎯</div><div><div class="cl-t">'+pos2.t+'</div><div class="cl-s">'+pos2.s+'</div></div></div>';
 }
 
-// ── Sélection rayon ────────────────────────────────
 function onSel(){
   var k=document.getElementById('sel').value;
   rayonK=k||null;
@@ -702,9 +662,8 @@ function genBrief(){
   if(!k){alert('Veuillez choisir un rayon.');return;}
   rayonK=k;
   var m=META[k], d=D[k]||{};
-  var c=getCons(k);    // lire AVANT reset SHOT
+  var c=getCons(k);
   SHOT=null; majBtnEdit();
-
   var al=[];
   if(d.stk>20)      al.push({t:'bad',l:'⚠ '+d.stk+' stocks négatifs'});
   else if(d.stk>0)  al.push({t:'warn',l:d.stk+' stocks négatifs'});
@@ -795,14 +754,14 @@ function savMan(){mOp1=document.getElementById('m1').value.trim();mOp2=document.
 function effMan(){['m1','m2','m3'].forEach(function(i){document.getElementById(i).value='';});mOp1=mOp2=mCl='';majBtnMan();fov('ov-man');}
 function majBtnMan(){var b=document.getElementById('btn-man');var has=mOp1||mOp2||mCl;b.classList.toggle('on',!!has);b.textContent=has?'✏️ Consignes manuelles ●':'✏️ Consignes manuelles';}
 
-// ── Modifier consignes (one-shot) ──────────────────
+// ── Modifier consignes one-shot ────────────────────
 var GRP={
   pgc:[{lb:'🛒 PGC — Opérationnel',co:'#003d8f',ks:['pgc_o1','pgc_o2','pgc_o3'],ns:['Consigne 1','Consigne 2','Consigne 3']},{lb:'🛒 PGC — Propreté',co:'#16a34a',ks:['pgc_c1','pgc_c2','pgc_c3'],ns:['Propreté 1','Propreté 2','Propreté 3']}],
   pls:[{lb:'❄️ PLS — Opérationnel',co:'#003d8f',ks:['pls_o1','pls_o2','pls_o3'],ns:['Consigne 1','Consigne 2','Consigne 3']},{lb:'❄️ PLS — Propreté',co:'#16a34a',ks:['pls_c1','pls_c2','pls_c3'],ns:['Propreté 1','Propreté 2','Propreté 3']}],
-  pft_tb:[{lb:'🥩 PFT Opérationnel (Boucherie/Poissonnerie/Charcuterie)',co:'#003d8f',ks:['pft_tb','pft_o2','pft_o3'],ns:['Traçabilité','Consigne 2','Consigne 3']},{lb:'🥩 PFT — Propreté',co:'#16a34a',ks:['pft_c1','pft_c2','pft_c3'],ns:['Propreté 1','Propreté 2','Propreté 3']}],
-  pft_fl:[{lb:'🥬 PFT Opérationnel (Fruits & Légumes)',co:'#003d8f',ks:['pft_fl','pft_o2','pft_o3'],ns:['Origine','Consigne 2','Consigne 3']},{lb:'🥬 PFT — Propreté',co:'#16a34a',ks:['pft_c1','pft_c2','pft_c3'],ns:['Propreté 1','Propreté 2','Propreté 3']}],
+  pft_tb:[{lb:'🥩 PFT Opérationnel',co:'#003d8f',ks:['pft_tb','pft_o2','pft_o3'],ns:['Traçabilité','Consigne 2','Consigne 3']},{lb:'🥩 PFT — Propreté',co:'#16a34a',ks:['pft_c1','pft_c2','pft_c3'],ns:['Propreté 1','Propreté 2','Propreté 3']}],
+  pft_fl:[{lb:'🥬 PFT Opérationnel (F&L)',co:'#003d8f',ks:['pft_fl','pft_o2','pft_o3'],ns:['Origine','Consigne 2','Consigne 3']},{lb:'🥬 PFT — Propreté',co:'#16a34a',ks:['pft_c1','pft_c2','pft_c3'],ns:['Propreté 1','Propreté 2','Propreté 3']}],
   pft_bo:[{lb:'🥐 PFT Opérationnel (Boulangerie)',co:'#003d8f',ks:['pft_bo','pft_o2','pft_o3'],ns:['Allergènes','Consigne 2','Consigne 3']},{lb:'🥐 PFT — Propreté',co:'#16a34a',ks:['pft_c1','pft_c2','pft_c3'],ns:['Propreté 1','Propreté 2','Propreté 3']}],
-  pft_dl:[{lb:'🐟 PFT Opérationnel (Autres PFT)',co:'#003d8f',ks:['pft_dl','pft_o2','pft_o3'],ns:['DLC','Consigne 2','Consigne 3']},{lb:'🐟 PFT — Propreté',co:'#16a34a',ks:['pft_c1','pft_c2','pft_c3'],ns:['Propreté 1','Propreté 2','Propreté 3']}],
+  pft_dl:[{lb:'🐟 PFT Opérationnel',co:'#003d8f',ks:['pft_dl','pft_o2','pft_o3'],ns:['DLC','Consigne 2','Consigne 3']},{lb:'🐟 PFT — Propreté',co:'#16a34a',ks:['pft_c1','pft_c2','pft_c3'],ns:['Propreté 1','Propreté 2','Propreté 3']}],
   na:[{lb:'📦 Non Alim — Opérationnel',co:'#003d8f',ks:['na_o1','na_o2','na_o3'],ns:['Consigne 1','Consigne 2','Consigne 3']},{lb:'📦 Non Alim — Propreté',co:'#16a34a',ks:['na_c1','na_c2','na_c3'],ns:['Propreté 1','Propreté 2','Propreté 3']}]
 };
 function getGrp(k){var t=META[k]?META[k].t:'na';if(t==='pgc')return GRP.pgc;if(t==='pls')return GRP.pls;if(t==='pft'){if(k==='20'||k==='21'||k==='24')return GRP.pft_tb;if(k==='22')return GRP.pft_fl;if(k==='23')return GRP.pft_bo;return GRP.pft_dl;}return GRP.na;}
@@ -826,8 +785,6 @@ function ouvEdit(){
   document.getElementById('ov-edt').classList.add('open');
 }
 
-// CORRECTION BUG SUPPRESSION : stocker '' pour les consignes effacées
-// (différent de l'absence de clé = non modifié)
 function appEdit(){
   var tas=document.querySelectorAll('#edit-c textarea'),shot={},has=false;
   tas.forEach(function(ta){
@@ -837,7 +794,6 @@ function appEdit(){
   SHOT=has?shot:null;
   majBtnEdit(); fov('ov-edt');
 }
-
 function majBtnEdit(){
   var b=document.getElementById('btn-edt'); if(!b) return;
   b.disabled=!document.getElementById('sel').value;
@@ -863,7 +819,6 @@ function imprimer(){
   w.document.close();
 }
 
-// ── Utils ──────────────────────────────────────────
 function esc(s){return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
 function fov(id){document.getElementById(id).classList.remove('open');}
 document.querySelectorAll('.ov').forEach(function(ov){
