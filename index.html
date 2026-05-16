@@ -389,10 +389,22 @@ function parserPerf(txt){
       var v=ns[j];
       if(v===Math.round(v)&&v>=0&&v<5000) trail.push(v);
     }
-    if(trail.length>=3){d.stk=trail[trail.length-3];d.rupt=trail[trail.length-2];}
-    else if(trail.length===2){d.stk=trail[0];d.rupt=trail[1];}
-    else if(trail.length===1){d.rupt=trail[0];d.stk=0;}
-    else{d.stk=0;d.rupt=0;}
+    // PFT (rayons 20-24) : pas de stocks négatifs commandables dans Darwin.
+    // Le seul entier pertinent est la rupture catalogue.
+    // PLS (25) et tous les autres conservent la logique standard.
+    var typRayon=META[num]?META[num].t:'na';
+    if(typRayon==='pft'){
+      d.stk=trail.length>=1?trail[0]:0;
+      d.rupt=0;
+    } else if(trail.length>=3){
+      d.stk=trail[trail.length-3];d.rupt=trail[trail.length-2];
+    } else if(trail.length===2){
+      d.stk=trail[0];d.rupt=trail[1];
+    } else if(trail.length===1){
+      d.rupt=trail[0];d.stk=0;
+    } else {
+      d.stk=0;d.rupt=0;
+    }
   }
 }
 
@@ -409,26 +421,32 @@ function parserRayons(txt){
     if(!D[num]||!NOM_PG[num]) continue;
     if(ligne.toUpperCase().indexOf(NOM_PG[num])===-1) continue;
     var merged=ligne;
-    for(var x=1;x<=3&&i+x<n;x++){
+    for(var x=1;x<=5&&i+x<n;x++){
       var nxt=lines[i+x].trim();
       if(!nxt) continue;
-      if(nxt.match(RE_NUM)) break;
+      // Stopper uniquement si la ligne suivante est réellement un nouveau rayon
+      // (code rayon + son nom) — pas juste un nombre qui ressemble à un code rayon
+      var nxtM=nxt.match(RE_NUM);
+      if(nxtM){
+        var nxtNum=nxtM[1].toUpperCase();
+        if(NOM_PG[nxtNum]&&nxt.toUpperCase().indexOf(NOM_PG[nxtNum])!==-1) break;
+      }
       if(/\d/.test(nxt)) merged+=' '+nxt;
     }
     var ns=getNums(merged); if(ns.length<5) continue;
-    var n4=ns[4]||0,n5=ns[5]||0,n6=ns[6]||0;
-    var rang=0,er=0;
-    if(n4===Math.round(n4)&&n4>=1&&n4<=300){
-      rang=Math.round(n4); er=Math.round(n5);
-    } else if(n6===Math.round(n6)&&n6>=1&&n6<=300){
-      rang=Math.round(n6); er=Math.round(ns[7]||0);
-    } else if(n5===Math.round(n5)&&n5>=1&&n5<=300){
-      rang=Math.round(n5); er=Math.round(n6);
+    // Scanner depuis ns[4] : 1er entier ∈ [1,300] = Rang CA, suivant = Évolution rang
+    var rang=0, er=0;
+    for(var ri=4; ri<ns.length; ri++){
+      if(ns[ri]===Math.round(ns[ri])&&ns[ri]>=1&&ns[ri]<=300){
+        rang=Math.round(ns[ri]);
+        er=Math.round(ns[ri+1]||0);
+        break;
+      }
     }
     var d=D[num];
     if(rang>=1&&rang<=300) d.rang=rang;
     if(er>=-300&&er<=300) d.er=er;
-    console.log('[RAYONS] '+num+' rang='+rang+' er='+er+' ns='+JSON.stringify(ns.slice(0,8)));
+    console.log('[RAYONS] '+num+' rang='+rang+' er='+er+' ns='+JSON.stringify(ns.slice(0,10)));
   }
 }
 
@@ -633,7 +651,7 @@ var MSG_POS=[
 ];
 var MSG_NEG=[
   {t:"Point d'amélioration :",s:"Les stocks négatifs sont à corriger en priorité pour fiabiliser les commandes automatiques."},
-  {t:"Point d'amélioration :",s:"Les ruptures assortiment pénalisent le CA — chasse aux trous et commande 1 carton pour chaque référence manquante."},
+  {t:"Point d'amélioration :",s:"Les ruptures catalogue pénalisent le CA — chasse aux trous et commande 1 carton pour chaque référence manquante."},
   {t:"Point d'amélioration :",s:"Le chiffre d'affaires est en recul — renforcer le facing et la disponibilité produit pour limiter la perte."},
   {t:"Point d'amélioration :",s:"La marge est sous pression — contrôler les prix d'achat et limiter les démarques non justifiées."},
   {t:"Point d'amélioration :",s:"L'écart au budget persiste — chaque vente compte pour rattraper le retard."}
@@ -699,8 +717,8 @@ function genBrief(){
   var al=[];
   if(d.stk>20)      al.push({t:'bad',l:'⚠ '+d.stk+' stocks négatifs'});
   else if(d.stk>0)  al.push({t:'warn',l:d.stk+' stocks négatifs'});
-  if(d.rupt>50)     al.push({t:'bad',l:'⚠ '+d.rupt+' ruptures assortiment'});
-  else if(d.rupt>0) al.push({t:'warn',l:d.rupt+' ruptures assortiment'});
+  if(d.rupt>50)     al.push({t:'bad',l:'⚠ '+d.rupt+' ruptures catalogue'});
+  else if(d.rupt>0) al.push({t:'warn',l:d.rupt+' ruptures catalogue'});
   if(d.ev<-15) al.push({t:'bad',l:'CA en forte baisse ('+(d.ev>=0?'+':'')+d.ev.toFixed(1)+'%)'});
   if(d.dm<-3)  al.push({t:'bad',l:'Marge en recul ('+(d.dm>=0?'+':'')+d.dm.toFixed(2)+' pts)'});
   if(d.dm>2)   al.push({t:'good',l:'✓ Marge en progression (+'+d.dm.toFixed(2)+' pts)'});
