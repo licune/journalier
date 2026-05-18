@@ -3,1158 +3,745 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Brief Journalier — Carrefour Narbonne HF7152</title>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.min.js"></script>
+<title>Portail — Carrefour HF7152 Narbonne</title>
 <style>
-:root{--blue:#003d8f;--red:#e20e17;--lblue:#0066cc;--bg:#f0f3f8;--card:#fff;--text:#1a1a2e;--muted:#6b7280;--green:#16a34a;--orange:#ea580c;--border:#d1d9e6;--purple:#7c3aed;--cyan:#0369a1}
+/* ── Tokens ──────────────────────────────────────── */
+:root{
+  --blue:#003d8f;
+  --lblue:#0055cc;
+  --xblue:#001f5a;
+  --red:#e20e17;
+  --bg:#0a0f1e;
+  --card:#111827;
+  --card2:#1a2234;
+  --text:#f0f4ff;
+  --muted:#94a3b8;
+  --border:#1e2d4a;
+  --green:#22c55e;
+  --green-d:#15803d;
+  --orange:#f59e0b;
+  --accent:#4a9eff;
+  --accent2:#7dd3fc;
+}
+
 *{box-sizing:border-box;margin:0;padding:0}
-body{font-family:'Segoe UI',system-ui,sans-serif;background:var(--bg);color:var(--text);min-height:100vh}
-.hdr{background:var(--blue);color:#fff;padding:12px 20px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px}
-.hdr-logo{display:flex;align-items:center;gap:10px}
-.hdr-badge{width:42px;height:42px;background:var(--red);border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:900;font-size:20px;flex-shrink:0}
-.hdr-title{font-size:20px;font-weight:700;line-height:1.2}
-.hdr-sub{font-size:11px;opacity:.7}
-.hdr-date{font-size:12px;opacity:.85;text-align:right;line-height:1.6}
-.wrap{max-width:980px;margin:0 auto;padding:14px}
-.ctrl{background:var(--card);border-radius:10px;padding:14px;margin-bottom:14px;border:1px solid var(--border)}
-.ctrl-row{display:flex;flex-wrap:wrap;gap:10px;align-items:flex-end}
-.ctrl-group{display:flex;flex-direction:column;gap:4px;flex:1;min-width:140px}
-.ctrl-group .lbl{font-size:11px;font-weight:700;text-transform:uppercase;color:var(--muted);letter-spacing:.4px}
-.file-btn{display:flex;align-items:center;gap:6px;padding:8px 10px;border:1.5px solid var(--border);border-radius:6px;cursor:pointer;background:#fff;font-size:13px;transition:all .15s;user-select:none;min-height:38px}
-.file-btn:hover{border-color:var(--lblue);background:#f0f6ff}
-.file-btn.ok{border-color:var(--green);background:#f0fdf4}
-.file-btn input{display:none}
-.fname{font-size:11px;color:var(--muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:130px}
-.file-btn.ok .fname{color:#166534}
-select{padding:8px 10px;border:1.5px solid var(--border);border-radius:6px;font-size:13px;color:var(--text);background:#fff;cursor:pointer;min-height:38px;width:100%}
-select:focus{outline:none;border-color:var(--lblue)}
-.btn{padding:9px 14px;border-radius:6px;font-size:13px;font-weight:700;cursor:pointer;border:none;transition:all .15s;white-space:nowrap;font-family:inherit}
-.btn-blue{background:var(--blue);color:#fff}.btn-blue:hover{background:var(--lblue)}
-.btn-out{background:#fff;border:1.5px solid var(--blue);color:var(--blue)}.btn-out:hover{background:var(--blue);color:#fff}
-.btn-pur{background:#fff;border:1.5px solid var(--purple);color:var(--purple)}.btn-pur:hover{background:var(--purple);color:#fff}
-.btn-pur.on{background:#f3e8ff}
-.btn-cyn{background:#fff;border:1.5px solid var(--cyan);color:var(--cyan)}.btn-cyn:hover{background:var(--cyan);color:#fff}
-.btn-cyn.on{background:#e0f2fe}
-.btn-org{background:#fff;border:1.5px solid var(--orange);color:var(--orange)}.btn-org:hover{background:var(--orange);color:#fff}
-.btn:disabled{opacity:.35;cursor:not-allowed;pointer-events:none}
-.stat{font-size:12px;color:var(--muted);margin-top:6px;width:100%}
-.stat.ok{color:var(--green)}.stat.err{color:var(--red)}
-#inf-reg{font-size:12px;margin-top:4px;width:100%;min-height:16px;line-height:1.5}
-#brief{display:none}
-.b-hdr{background:linear-gradient(135deg,var(--blue) 55%,#0055b3);color:#fff;border-radius:10px;padding:18px 20px;margin-bottom:12px;display:flex;flex-wrap:wrap;gap:12px;justify-content:space-between;align-items:center}
-.b-title{font-size:26px;font-weight:800;line-height:1.1}
-.b-meta{font-size:11px;opacity:.65;margin-top:3px}
-.kpis{display:flex;flex-wrap:wrap;gap:7px}
-.kpi{background:rgba(255,255,255,.13);border-radius:7px;padding:8px 11px;min-width:88px;text-align:center}
-.kv{font-size:18px;font-weight:700}.kl{font-size:10px;opacity:.75;margin-top:1px}
-.up{color:#86efac}.dn{color:#fca5a5}.nt{color:#fde68a}
-.g2{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px}
-@media(max-width:580px){.g2{grid-template-columns:1fr}}
-.card{background:var(--card);border-radius:10px;border:1px solid var(--border);overflow:hidden}
-.card.full{grid-column:1/-1}
-.ch{padding:9px 14px;font-size:13px;font-weight:700;display:flex;align-items:center;gap:6px}
-.ch.op{background:#eff6ff;color:var(--blue);border-bottom:1px solid #dbeafe}
-.ch.cl{background:#f0fdf4;color:#166534;border-bottom:1px solid #bbf7d0}
-.ch.al{background:#fff7ed;color:#9a3412;border-bottom:1px solid #fed7aa}
-.ch.rg{background:#fdf4ff;color:#6b21a8;border-bottom:1px solid #e9d5ff}
-.clist{padding:10px 12px;display:flex;flex-direction:column;gap:8px}
-.ci{display:flex;gap:8px;align-items:flex-start;padding:9px 10px;border-radius:7px;background:#f9fafb;border-left:3px solid var(--blue)}
-.ci.cl{border-left-color:var(--green)}
-.ci.man{border-left-color:var(--purple);background:#faf5ff}
-.cn{font-size:16px;font-weight:800;color:var(--blue);min-width:20px;line-height:1.35;flex-shrink:0}
-.ci.cl .cn{color:var(--green)}.ci.man .cn{color:var(--purple)}
-.ct{font-size:13px;line-height:1.55}
-.mbadge{display:inline-block;background:#ede9fe;color:#6d28d9;font-size:10px;font-weight:700;padding:1px 5px;border-radius:3px;margin-left:5px;vertical-align:middle}
-.alerts{padding:10px 12px;display:flex;flex-wrap:wrap;gap:6px}
-.chip{padding:4px 10px;border-radius:20px;font-size:12px;font-weight:600}
-.chip.bad{background:#fee2e2;color:#991b1b}
-.chip.warn{background:#fff3cd;color:#92400e}
-.chip.good{background:#dcfce7;color:#166534}
-.closing{background:linear-gradient(135deg,var(--blue),var(--lblue));color:#fff;border-radius:10px;padding:15px 20px;margin-bottom:12px;display:flex;align-items:center;gap:14px}
-.cl-ico{font-size:30px;flex-shrink:0}
-.cl-t{font-size:15px;font-weight:700;margin-bottom:3px}
-.cl-s{font-size:13px;opacity:.85}
-.bfoot{text-align:center;font-size:11px;color:var(--muted);padding:6px 0 16px}
-.rtbl{width:100%;border-collapse:collapse;font-size:12.5px}
-.rtbl th{padding:6px 10px;text-align:left;font-size:11px;font-weight:700;text-transform:uppercase;color:var(--muted);border-bottom:1px solid var(--border)}
-.rtbl td{padding:7px 10px;border-bottom:1px solid #f0f3f8}
-.rtbl tr.me td{font-weight:700;background:#fffbeb}
-.rbg{display:inline-block;min-width:24px;text-align:center;padding:2px 5px;border-radius:4px;font-size:12px;font-weight:700;background:#e0e7ff;color:var(--blue)}
-.rbg.top{background:#fef9c3;color:#854d0e}
-.rbg.me{background:var(--blue);color:#fff}
-.ov{display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:1000;align-items:flex-start;justify-content:center;padding:14px;overflow-y:auto}
-.ov.open{display:flex}
-.modal{background:#fff;border-radius:12px;width:100%;max-width:560px;margin:auto;box-shadow:0 20px 60px rgba(0,0,0,.3)}
-.modal.wide{max-width:700px}
-.mh{padding:13px 18px;border-radius:12px 12px 0 0;display:flex;justify-content:space-between;align-items:center}
-.mh.purple{background:var(--purple);color:#fff}
-.mh.cyan{background:var(--cyan);color:#fff}
-.mh span{font-size:16px;font-weight:700}
-.mclose{background:none;border:none;color:#fff;font-size:22px;cursor:pointer;line-height:1;padding:0 4px}
-.mbody{padding:14px;display:flex;flex-direction:column;gap:11px}
-.mnote{font-size:12.5px;color:var(--muted)}
-.flbl{font-size:11px;font-weight:700;text-transform:uppercase;color:var(--muted);letter-spacing:.4px;display:flex;gap:6px;align-items:center;margin-bottom:4px}
-textarea{width:100%;padding:8px 10px;border:1.5px solid var(--border);border-radius:6px;font-family:inherit;font-size:13px;resize:vertical;line-height:1.5}
-textarea:focus{outline:none;border-color:var(--lblue)}
-.mfoot{display:flex;gap:8px;justify-content:flex-end;flex-wrap:wrap;margin-top:4px}
-.eg{border:1px solid #e5e7eb;border-radius:8px;overflow:hidden;margin-bottom:10px}
-.egh{padding:7px 12px;font-size:13px;font-weight:700}
-.egb{padding:12px;display:flex;flex-direction:column;gap:10px}
-.modb{background:#dbeafe;color:#1d4ed8;font-size:10px;padding:1px 5px;border-radius:3px}
-@media print{.ctrl,.ov{display:none!important}#brief{display:block!important}body{background:#fff}.b-hdr,.closing{-webkit-print-color-adjust:exact;print-color-adjust:exact}}
+html{scroll-behavior:smooth}
+body{
+  font-family:'Segoe UI',system-ui,-apple-system,sans-serif;
+  background:var(--bg);
+  color:var(--text);
+  min-height:100vh;
+  overflow-x:hidden;
+}
+
+/* ── Background mesh ─────────────────────────────── */
+body::before{
+  content:'';
+  position:fixed;
+  inset:0;
+  background:
+    radial-gradient(ellipse 80% 60% at 10% 0%, rgba(0,61,143,.35) 0%, transparent 60%),
+    radial-gradient(ellipse 60% 50% at 90% 100%, rgba(0,85,204,.2) 0%, transparent 55%),
+    radial-gradient(ellipse 40% 40% at 50% 50%, rgba(74,158,255,.04) 0%, transparent 70%);
+  pointer-events:none;
+  z-index:0;
+}
+
+/* ── Grid de points décoratifs ───────────────────── */
+body::after{
+  content:'';
+  position:fixed;
+  inset:0;
+  background-image:radial-gradient(circle, rgba(255,255,255,.04) 1px, transparent 1px);
+  background-size:28px 28px;
+  pointer-events:none;
+  z-index:0;
+}
+
+.layer{position:relative;z-index:1}
+
+/* ── Header ─────────────────────────────────────── */
+.hdr{
+  background:rgba(0,10,30,.7);
+  backdrop-filter:blur(16px);
+  -webkit-backdrop-filter:blur(16px);
+  border-bottom:1px solid rgba(255,255,255,.06);
+  padding:0 28px;
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  height:60px;
+  position:sticky;
+  top:0;
+  z-index:100;
+}
+.hdr-logo{display:flex;align-items:center;gap:12px}
+.logo-badge{
+  width:38px;height:38px;
+  background:var(--red);
+  border-radius:50%;
+  display:flex;align-items:center;justify-content:center;
+  font-weight:900;font-size:18px;color:#fff;
+  box-shadow:0 0 16px rgba(226,14,23,.5);
+  flex-shrink:0;
+}
+.hdr-brand{font-size:15px;font-weight:700;letter-spacing:-.2px}
+.hdr-brand span{color:var(--accent);font-weight:400;font-size:12px;margin-left:6px;opacity:.8}
+.hdr-nav{display:flex;align-items:center;gap:6px}
+.nav-chip{
+  padding:6px 14px;
+  border-radius:20px;
+  font-size:12px;font-weight:600;
+  border:1px solid rgba(255,255,255,.1);
+  color:var(--muted);
+  cursor:pointer;
+  transition:all .15s;
+  text-decoration:none;
+  background:transparent;
+}
+.nav-chip:hover{border-color:var(--accent);color:var(--accent);background:rgba(74,158,255,.08)}
+.nav-chip.primary{background:var(--blue);color:#fff;border-color:var(--blue);box-shadow:0 2px 12px rgba(0,61,143,.4)}
+.nav-chip.primary:hover{background:var(--lblue);border-color:var(--lblue)}
+
+/* ── Hero ────────────────────────────────────────── */
+.hero{
+  min-height:calc(100vh - 60px);
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  justify-content:center;
+  padding:60px 24px;
+  text-align:center;
+  gap:0;
+}
+.hero-eyebrow{
+  display:inline-flex;align-items:center;gap:8px;
+  background:rgba(0,61,143,.25);
+  border:1px solid rgba(0,85,204,.4);
+  padding:6px 16px;
+  border-radius:20px;
+  font-size:12px;font-weight:700;
+  color:var(--accent2);
+  letter-spacing:.8px;
+  text-transform:uppercase;
+  margin-bottom:28px;
+  animation:fadeUp .6s ease both;
+}
+.hero-eyebrow-dot{
+  width:6px;height:6px;
+  background:var(--green);
+  border-radius:50%;
+  animation:pulse 2s ease infinite;
+}
+@keyframes pulse{0%,100%{box-shadow:0 0 0 0 rgba(34,197,94,.6)}50%{box-shadow:0 0 0 5px rgba(34,197,94,0)}}
+
+.hero-title{
+  font-size:clamp(36px,6vw,72px);
+  font-weight:800;
+  line-height:1.05;
+  letter-spacing:-2px;
+  margin-bottom:20px;
+  animation:fadeUp .6s .1s ease both;
+}
+.hero-title .line1{display:block;color:var(--text)}
+.hero-title .line2{
+  display:block;
+  background:linear-gradient(90deg, var(--accent) 0%, #60a5fa 50%, var(--accent2) 100%);
+  -webkit-background-clip:text;
+  -webkit-text-fill-color:transparent;
+  background-clip:text;
+}
+.hero-title .store-id{
+  font-size:.45em;font-weight:500;letter-spacing:2px;
+  -webkit-text-fill-color:var(--muted);
+  color:var(--muted);
+  display:block;margin-top:8px;text-transform:uppercase;
+}
+
+.hero-sub{
+  font-size:16px;color:var(--muted);
+  max-width:520px;line-height:1.65;
+  margin-bottom:40px;
+  animation:fadeUp .6s .2s ease both;
+}
+
+.hero-cta{
+  display:flex;flex-wrap:wrap;gap:12px;justify-content:center;
+  animation:fadeUp .6s .3s ease both;
+  margin-bottom:64px;
+}
+.btn-hero{
+  padding:14px 28px;
+  border-radius:8px;
+  font-size:14px;font-weight:700;
+  cursor:pointer;border:none;
+  text-decoration:none;
+  display:inline-flex;align-items:center;gap:8px;
+  transition:all .18s;
+  letter-spacing:.2px;
+  font-family:inherit;
+}
+.btn-hero.primary{
+  background:var(--blue);color:#fff;
+  box-shadow:0 4px 20px rgba(0,61,143,.45);
+}
+.btn-hero.primary:hover{
+  background:var(--lblue);
+  box-shadow:0 6px 28px rgba(0,61,143,.6);
+  transform:translateY(-1px);
+}
+.btn-hero.secondary{
+  background:rgba(255,255,255,.06);
+  color:var(--text);
+  border:1px solid rgba(255,255,255,.12);
+}
+.btn-hero.secondary:hover{
+  background:rgba(255,255,255,.1);
+  border-color:rgba(255,255,255,.2);
+  transform:translateY(-1px);
+}
+
+/* ── Stats banner ────────────────────────────────── */
+.stats-row{
+  display:flex;flex-wrap:wrap;gap:0;
+  border:1px solid var(--border);
+  border-radius:12px;
+  overflow:hidden;
+  background:rgba(255,255,255,.03);
+  backdrop-filter:blur(8px);
+  max-width:660px;
+  width:100%;
+  animation:fadeUp .6s .4s ease both;
+}
+.stat-cell{
+  flex:1;min-width:120px;
+  padding:16px 20px;
+  text-align:center;
+  border-right:1px solid var(--border);
+  position:relative;
+}
+.stat-cell:last-child{border-right:none}
+.stat-val{font-size:22px;font-weight:800;color:var(--text);line-height:1}
+.stat-val.blue{color:var(--accent)}
+.stat-val.green{color:var(--green)}
+.stat-val.red{color:#f87171}
+.stat-lbl{font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.6px;margin-top:5px}
+
+/* ── Section features ────────────────────────────── */
+.section{padding:80px 24px;max-width:1100px;margin:0 auto}
+.section-label{
+  font-size:11px;font-weight:700;text-transform:uppercase;
+  letter-spacing:1.2px;color:var(--accent);
+  margin-bottom:12px;
+}
+.section-title{
+  font-size:clamp(24px,3.5vw,38px);font-weight:800;
+  letter-spacing:-1px;line-height:1.1;
+  margin-bottom:14px;
+}
+.section-sub{font-size:15px;color:var(--muted);max-width:520px;line-height:1.6;margin-bottom:48px}
+
+/* Features grid */
+.feat-grid{
+  display:grid;
+  grid-template-columns:repeat(auto-fit,minmax(280px,1fr));
+  gap:16px;
+}
+.feat-card{
+  background:var(--card);
+  border:1px solid var(--border);
+  border-radius:12px;
+  padding:24px;
+  transition:all .2s;
+  position:relative;
+  overflow:hidden;
+}
+.feat-card::before{
+  content:'';
+  position:absolute;
+  inset:0;
+  background:linear-gradient(135deg,rgba(74,158,255,.05) 0%,transparent 60%);
+  opacity:0;
+  transition:opacity .2s;
+}
+.feat-card:hover{
+  border-color:rgba(74,158,255,.3);
+  transform:translateY(-2px);
+  box-shadow:0 8px 32px rgba(0,0,0,.4);
+}
+.feat-card:hover::before{opacity:1}
+.feat-ico{
+  width:42px;height:42px;
+  border-radius:10px;
+  display:flex;align-items:center;justify-content:center;
+  font-size:20px;
+  margin-bottom:16px;
+  flex-shrink:0;
+}
+.feat-ico.blue{background:rgba(0,61,143,.3);border:1px solid rgba(0,85,204,.3)}
+.feat-ico.green{background:rgba(34,197,94,.15);border:1px solid rgba(34,197,94,.25)}
+.feat-ico.orange{background:rgba(245,158,11,.15);border:1px solid rgba(245,158,11,.25)}
+.feat-ico.red{background:rgba(239,68,68,.15);border:1px solid rgba(239,68,68,.25)}
+.feat-ico.purple{background:rgba(139,92,246,.15);border:1px solid rgba(139,92,246,.25)}
+.feat-ico.cyan{background:rgba(6,182,212,.15);border:1px solid rgba(6,182,212,.25)}
+.feat-title{font-size:15px;font-weight:700;margin-bottom:7px;letter-spacing:-.2px}
+.feat-desc{font-size:13px;color:var(--muted);line-height:1.6}
+.feat-tag{
+  display:inline-block;margin-top:12px;
+  font-size:10px;font-weight:700;letter-spacing:.5px;text-transform:uppercase;
+  padding:3px 8px;border-radius:4px;
+}
+.feat-tag.new{background:rgba(34,197,94,.15);color:var(--green)}
+.feat-tag.fix{background:rgba(245,158,11,.15);color:var(--orange)}
+.feat-tag.core{background:rgba(74,158,255,.15);color:var(--accent)}
+
+/* ── Workflow steps ──────────────────────────────── */
+.steps{display:flex;flex-direction:column;gap:0;max-width:600px;margin:0 auto}
+.step{
+  display:flex;gap:20px;align-items:flex-start;
+  padding:20px 0;
+  border-bottom:1px solid var(--border);
+  animation:fadeUp .5s ease both;
+}
+.step:last-child{border-bottom:none}
+.step-num{
+  width:36px;height:36px;
+  border-radius:50%;
+  background:var(--blue);
+  color:#fff;
+  font-size:14px;font-weight:800;
+  display:flex;align-items:center;justify-content:center;
+  flex-shrink:0;
+  box-shadow:0 0 12px rgba(0,61,143,.4);
+}
+.step-body{flex:1}
+.step-title{font-size:14px;font-weight:700;margin-bottom:4px}
+.step-desc{font-size:13px;color:var(--muted);line-height:1.55}
+.step-badge{
+  display:inline-block;font-size:10px;font-weight:700;
+  padding:2px 7px;border-radius:4px;margin-top:6px;
+  background:rgba(255,255,255,.07);color:var(--muted);letter-spacing:.3px;
+}
+
+/* ── Files section ───────────────────────────────── */
+.files-grid{
+  display:grid;
+  grid-template-columns:repeat(auto-fit,minmax(260px,1fr));
+  gap:12px;
+}
+.file-card{
+  background:var(--card2);
+  border:1px solid var(--border);
+  border-radius:10px;
+  padding:18px 20px;
+  display:flex;align-items:flex-start;gap:14px;
+  transition:all .15s;
+  cursor:default;
+}
+.file-card:hover{border-color:rgba(74,158,255,.25);background:rgba(74,158,255,.04)}
+.file-ico-wrap{
+  width:40px;height:40px;
+  border-radius:8px;
+  background:rgba(226,14,23,.15);
+  border:1px solid rgba(226,14,23,.2);
+  display:flex;align-items:center;justify-content:center;
+  font-size:18px;flex-shrink:0;
+}
+.file-card.green .file-ico-wrap{background:rgba(0,85,204,.15);border-color:rgba(0,85,204,.2)}
+.file-card.orange .file-ico-wrap{background:rgba(245,158,11,.15);border-color:rgba(245,158,11,.2)}
+.file-info{}
+.file-name{font-size:13px;font-weight:700;margin-bottom:3px}
+.file-desc{font-size:12px;color:var(--muted);line-height:1.45}
+.file-opt{font-size:10px;font-weight:700;color:var(--orange);text-transform:uppercase;margin-top:4px;letter-spacing:.4px}
+
+/* ── CTA bottom ──────────────────────────────────── */
+.cta-section{
+  text-align:center;padding:80px 24px;
+  background:linear-gradient(180deg,transparent 0%,rgba(0,30,80,.4) 100%);
+}
+.cta-box{
+  display:inline-block;
+  background:linear-gradient(135deg,rgba(0,61,143,.4),rgba(0,85,204,.2));
+  border:1px solid rgba(0,85,204,.4);
+  border-radius:16px;
+  padding:48px 56px;
+  max-width:580px;
+  width:100%;
+  backdrop-filter:blur(8px);
+}
+.cta-title{font-size:clamp(22px,3vw,32px);font-weight:800;letter-spacing:-1px;margin-bottom:10px}
+.cta-sub{font-size:14px;color:var(--muted);margin-bottom:28px;line-height:1.6}
+
+/* ── Footer ─────────────────────────────────────── */
+.footer{
+  border-top:1px solid var(--border);
+  padding:24px 28px;
+  display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;
+  gap:12px;
+  font-size:12px;color:var(--muted);
+}
+.footer-left{display:flex;align-items:center;gap:10px}
+.footer-dot{width:6px;height:6px;background:var(--green);border-radius:50%}
+.footer-links{display:flex;gap:20px}
+.footer-links a{color:var(--muted);text-decoration:none;transition:color .1s}
+.footer-links a:hover{color:var(--text)}
+
+/* ── Animations ──────────────────────────────────── */
+@keyframes fadeUp{
+  from{opacity:0;transform:translateY(18px)}
+  to{opacity:1;transform:translateY(0)}
+}
+.fade-up{animation:fadeUp .55s ease both}
+.d1{animation-delay:.05s}.d2{animation-delay:.1s}.d3{animation-delay:.15s}
+.d4{animation-delay:.2s}.d5{animation-delay:.25s}.d6{animation-delay:.3s}
+
+/* ── Séparateur décoratif ────────────────────────── */
+.divider{
+  height:1px;
+  background:linear-gradient(90deg,transparent,var(--border),transparent);
+  margin:0 24px;
+}
+
+/* ── Responsive ─────────────────────────────────── */
+@media(max-width:640px){
+  .hdr{padding:0 16px}
+  .hdr-nav .nav-chip:not(.primary){display:none}
+  .hero-title{letter-spacing:-1px}
+  .stats-row{border-radius:8px}
+  .stat-cell{padding:12px 14px}
+  .stat-val{font-size:18px}
+  .cta-box{padding:32px 24px}
+  .section{padding:56px 16px}
+}
 </style>
 </head>
 <body>
 
-<div class="hdr">
+<!-- ── Header ─────────────────────────────────────── -->
+<header class="hdr layer">
   <div class="hdr-logo">
-    <div class="hdr-badge">C</div>
-    <div>
-      <div class="hdr-title">Brief Journalier — Carrefour Narbonne</div>
-      <div class="hdr-sub">Magasin HF7152 · DTF SUD EST · Source Darwin</div>
+    <div class="logo-badge">C</div>
+    <div class="hdr-brand">
+      Carrefour Narbonne
+      <span>HF7152</span>
     </div>
   </div>
-  <div class="hdr-date" id="hdr-date">Chargez les PDFs</div>
-</div>
+  <nav class="hdr-nav">
+    <a href="#fonctionnalites" class="nav-chip">Fonctionnalités</a>
+    <a href="#utilisation" class="nav-chip">Utilisation</a>
+    <a href="#fichiers" class="nav-chip">Fichiers PDF</a>
+    <a href="brief-journalier.html" class="nav-chip primary">▶ Ouvrir le Brief</a>
+  </nav>
+</header>
 
-<div class="wrap">
-  <div class="ctrl">
-    <div class="ctrl-row">
-      <div class="ctrl-group">
-        <div class="lbl">📄 Performances Globales</div>
-        <label class="file-btn" id="lb-p"><input type="file" id="f-p" accept=".pdf"><span>📥</span><span class="fname" id="fn-p">Charger PDF…</span></label>
-      </div>
-      <div class="ctrl-group">
-        <div class="lbl">📊 Classement Rayons</div>
-        <label class="file-btn" id="lb-r"><input type="file" id="f-r" accept=".pdf"><span>📥</span><span class="fname" id="fn-r">Charger PDF…</span></label>
-      </div>
-      <div class="ctrl-group">
-        <div class="lbl">🌍 Comparaison <small style="font-size:10px;font-weight:400;text-transform:none">(optionnel)</small></div>
-        <label class="file-btn" id="lb-c"><input type="file" id="f-c" accept=".pdf"><span>📥</span><span class="fname" id="fn-c">Charger PDF…</span></label>
-      </div>
-      <div class="ctrl-group">
-        <div class="lbl">Rayon</div>
-        <select id="sel" onchange="onSel()">
-          <option value="">— Choisir un rayon —</option>
-          <optgroup label="── Vue globale ──">
-            <option value="ALI">🛒 Alimentaire (PGC + PFT)</option>
-            <option value="NALI">📦 Non Alimentaire (Bazar + EPCS + Textile)</option>
-          </optgroup>
-          <optgroup label="━━━ ALIMENTAIRE ━━━">
-            <option value="1">1 — PGC (groupe)</option>
-            <option value="2">2 — PFT (groupe)</option>
-          </optgroup>
-          <optgroup label="PGC — Produits Grande Consommation">
-            <option value="10">10 — Boissons</option>
-            <option value="11">11 — Droguerie</option>
-            <option value="12">12 — Parfumerie Hygiène</option>
-            <option value="14">14 — Épicerie</option>
-            <option value="19">19 — Parapharmacie</option>
-          </optgroup>
-          <optgroup label="PFT — Produits Frais Traditionnels">
-            <option value="20">20 — Charcuterie / Traiteur</option>
-            <option value="21">21 — Poissonnerie</option>
-            <option value="22">22 — Fruits et Légumes</option>
-            <option value="23">23 — Boulangerie / Pâtisserie</option>
-            <option value="24">24 — Boucherie Volaille</option>
-            <option value="25">25 — PLS (Libre Service)</option>
-          </optgroup>
-          <optgroup label="━━━ NON ALIMENTAIRE ━━━">
-            <option value="3">3 — Bazar (groupe)</option>
-            <option value="4">4 — EPCS (groupe)</option>
-            <option value="6">6 — Textile (groupe)</option>
-          </optgroup>
-          <optgroup label="Bazar">
-            <option value="30">30 — Bricolage</option>
-            <option value="31">31 — Confort de la Maison</option>
-            <option value="32">32 — Papeterie</option>
-            <option value="33">33 — Jouet Sport</option>
-            <option value="34">34 — Jardin et Animalerie</option>
-            <option value="35">35 — Auto</option>
-            <option value="8X">8X — Culture</option>
-          </optgroup>
-          <optgroup label="EPCS — Électroménager / Photo / Son">
-            <option value="40">40 — GEM</option>
-            <option value="41">41 — PEM</option>
-            <option value="42">42 — Photo Communication</option>
-            <option value="43">43 — Image et Son</option>
-            <option value="44">44 — Micro Informatique</option>
-            <option value="45">45 — Radiotéléphonie</option>
-          </optgroup>
-          <optgroup label="Textile">
-            <option value="60">60 — Chaussure</option>
-            <option value="61">61 — Bébé</option>
-            <option value="62">62 — Enfant</option>
-            <option value="63">63 — Femme</option>
-            <option value="64">64 — Homme</option>
-            <option value="65">65 — Linge de Maison</option>
-            <option value="66">66 — Accessoires</option>
-            <option value="67">67 — Bijouterie</option>
-          </optgroup>
-        </select>
-      </div>
-      <button class="btn btn-blue" onclick="genBrief()">▶ Générer</button>
-      <button class="btn btn-pur" id="btn-man" onclick="ouvMan()">✏️ Consignes manuelles</button>
-      <button class="btn btn-cyn" id="btn-edt" onclick="ouvEdit()" disabled>⚙️ Modifier consignes</button>
-      <button class="btn btn-out" onclick="imprimer()">🖨️ Imprimer</button>
-      <button class="btn btn-org" id="btn-reg" onclick="affReg()" disabled>🌍 Classement Région</button>
-      <div class="stat" id="stat">Chargez les PDFs Darwin pour alimenter les données.</div>
-      <div id="inf-reg"></div>
-    </div>
+<!-- ── Hero ──────────────────────────────────────── -->
+<section class="hero layer">
+  <div class="hero-eyebrow">
+    <div class="hero-eyebrow-dot"></div>
+    DTF SUD EST · Source Darwin · Confidentiel
   </div>
-  <div id="brief"><div id="brief-c"></div></div>
-</div>
 
-<!-- MODAL MANUELLES -->
-<div class="ov" id="ov-man">
-  <div class="modal">
-    <div class="mh purple"><span>✏️ Consignes manuelles du jour</span><button class="mclose" onclick="fov('ov-man')">×</button></div>
-    <div class="mbody">
-      <p class="mnote">Ces consignes s'ajoutent aux consignes automatiques. Conservées jusqu'à effacement.</p>
-      <div><div class="flbl">➕ Consigne opérationnelle 1</div><textarea id="m1" rows="2" placeholder="Ex : Vérifier la mise en place de l'opération promo…"></textarea></div>
-      <div><div class="flbl">➕ Consigne opérationnelle 2 (optionnel)</div><textarea id="m2" rows="2" placeholder="Ex : Préparer le retour fournisseur prévu…"></textarea></div>
-      <div><div class="flbl">🧹 Consigne propreté (optionnel)</div><textarea id="m3" rows="2" placeholder="Ex : Nettoyer suite à la réception de ce matin…"></textarea></div>
-      <div class="mfoot">
-        <button class="btn" style="border:1.5px solid #e5e7eb;background:#fff;color:var(--muted)" onclick="effMan()">🗑 Effacer</button>
-        <button class="btn btn-blue" onclick="savMan()">✓ Enregistrer</button>
+  <h1 class="hero-title">
+    <span class="line1">Brief Journalier</span>
+    <span class="line2">Automatisé</span>
+    <span class="store-id">HF7152 — Narbonne</span>
+  </h1>
+
+  <p class="hero-sub">
+    Générez en quelques secondes un brief opérationnel complet pour chaque rayon —
+    données Darwin, consignes automatiques, classement national et régional.
+  </p>
+
+  <div class="hero-cta">
+    <a href="brief-journalier.html" class="btn-hero primary">
+      ▶ Ouvrir l'application
+    </a>
+    <a href="#utilisation" class="btn-hero secondary">
+      📖 Comment utiliser
+    </a>
+  </div>
+
+  <!-- Stats -->
+  <div class="stats-row">
+    <div class="stat-cell">
+      <div class="stat-val blue">38+</div>
+      <div class="stat-lbl">Rayons couverts</div>
+    </div>
+    <div class="stat-cell">
+      <div class="stat-val green">3</div>
+      <div class="stat-lbl">PDFs Darwin</div>
+    </div>
+    <div class="stat-cell">
+      <div class="stat-val">14</div>
+      <div class="stat-lbl">Jours en mémoire</div>
+    </div>
+    <div class="stat-cell">
+      <div class="stat-val" style="color:var(--orange)">0</div>
+      <div class="stat-lbl">Serveur requis</div>
+    </div>
+  </div>
+</section>
+
+<div class="divider layer"></div>
+
+<!-- ── Fonctionnalités ────────────────────────────── -->
+<section class="section layer" id="fonctionnalites">
+  <div class="section-label">Fonctionnalités</div>
+  <h2 class="section-title">Tout ce dont vous avez besoin,<br>dans un seul fichier HTML</h2>
+  <p class="section-sub">
+    L'application analyse automatiquement vos exports Darwin et génère un brief
+    structuré, actionnable et imprimable en moins de 10 secondes.
+  </p>
+
+  <div class="feat-grid">
+
+    <div class="feat-card fade-up d1">
+      <div class="feat-ico blue">📄</div>
+      <div class="feat-title">Parsing PDF automatique</div>
+      <div class="feat-desc">Extraction des données par coordonnées spatiales Y — CA, évolution N-1, taux de marge, écart budget, stocks négatifs, ruptures, rangs.</div>
+      <div class="feat-tag core">Core</div>
+    </div>
+
+    <div class="feat-card fade-up d2">
+      <div class="feat-ico green">📊</div>
+      <div class="feat-title">Brief rayon complet</div>
+      <div class="feat-desc">Consignes opérationnelles et propreté adaptées au type de rayon (PGC, PFT, PLS, Non Alim), points d'attention, classement national.</div>
+      <div class="feat-tag core">Core</div>
+    </div>
+
+    <div class="feat-card fade-up d3">
+      <div class="feat-ico cyan">🌍</div>
+      <div class="feat-title">Classement Régional DTF SUD EST</div>
+      <div class="feat-desc">Tableau comparatif des 31 magasins de la région avec rang, CA, évolution, débits et panier moyen. Votre position mise en évidence.</div>
+      <div class="feat-tag core">Core</div>
+    </div>
+
+    <div class="feat-card fade-up d4">
+      <div class="feat-ico orange">📅</div>
+      <div class="feat-title">Historique multi-jours</div>
+      <div class="feat-desc">Sauvegarde automatique de chaque journée chargée (jusqu'à 14 jours). Rechargez une journée passée en un clic, comparez les tendances.</div>
+      <div class="feat-tag new">Nouveau</div>
+    </div>
+
+    <div class="feat-card fade-up d5">
+      <div class="feat-ico purple">📈</div>
+      <div class="feat-title">Sparkline & résumé semaine</div>
+      <div class="feat-desc">Visualisation graphique du CA sur la période, CA cumulé, moyen, meilleur/pire jour et évolution N-1 moyenne sur toutes les journées mémorisées.</div>
+      <div class="feat-tag new">Nouveau</div>
+    </div>
+
+    <div class="feat-card fade-up d6">
+      <div class="feat-ico red">🔍</div>
+      <div class="feat-title">Validation automatique des données</div>
+      <div class="feat-desc">Détection d'anomalies après chaque chargement : CA négatif, taux hors plage, évolutions aberrantes, rangs impossibles. Rapport détaillé accessible.</div>
+      <div class="feat-tag new">Nouveau</div>
+    </div>
+
+    <div class="feat-card fade-up d1">
+      <div class="feat-ico blue">✏️</div>
+      <div class="feat-title">Consignes manuelles persistantes</div>
+      <div class="feat-desc">Ajoutez jusqu'à 3 consignes personnalisées (2 opérationnelles + 1 propreté). Conservées en mémoire locale même après fermeture du navigateur.</div>
+      <div class="feat-tag fix">Amélioré</div>
+    </div>
+
+    <div class="feat-card fade-up d2">
+      <div class="feat-ico green">⚙️</div>
+      <div class="feat-title">Modification one-shot des consignes</div>
+      <div class="feat-desc">Personnalisez les consignes automatiques pour un seul brief sans modifier les bases. Supprimez une consigne en laissant le champ vide.</div>
+      <div class="feat-tag core">Core</div>
+    </div>
+
+    <div class="feat-card fade-up d3">
+      <div class="feat-ico orange">🖨️</div>
+      <div class="feat-title">Impression optimisée</div>
+      <div class="feat-desc">Mise en page dédiée impression : en-tête Carrefour, couleurs fidèles, pas d'éléments UI parasites. Compatible tous navigateurs modernes.</div>
+      <div class="feat-tag core">Core</div>
+    </div>
+
+  </div>
+</section>
+
+<div class="divider layer"></div>
+
+<!-- ── Utilisation ────────────────────────────────── -->
+<section class="section layer" id="utilisation">
+  <div class="section-label">Guide d'utilisation</div>
+  <h2 class="section-title">Générer un brief en 4 étapes</h2>
+  <p class="section-sub">
+    Aucune installation requise. Ouvrez <code style="background:rgba(255,255,255,.08);padding:2px 6px;border-radius:4px;font-size:13px">brief-journalier.html</code> dans votre navigateur et suivez ces étapes.
+  </p>
+
+  <div class="steps">
+    <div class="step fade-up d1">
+      <div class="step-num">1</div>
+      <div class="step-body">
+        <div class="step-title">Chargez le PDF Performances Globales</div>
+        <div class="step-desc">Exporté depuis Darwin → Reporting Magasin. Contient le CA, la marge, les écarts budget, les stocks négatifs et les ruptures.</div>
+        <div class="step-badge">Obligatoire</div>
+      </div>
+    </div>
+    <div class="step fade-up d2">
+      <div class="step-num">2</div>
+      <div class="step-body">
+        <div class="step-title">Chargez le PDF Classement Rayons</div>
+        <div class="step-desc">Exporté depuis Darwin → Classement Rayons. Fournit le rang CA national et l'évolution de rang de chaque rayon.</div>
+        <div class="step-badge">Obligatoire</div>
+      </div>
+    </div>
+    <div class="step fade-up d3">
+      <div class="step-num">3</div>
+      <div class="step-body">
+        <div class="step-title">Chargez le PDF Comparaison Magasins <span style="color:var(--orange);font-size:12px">(optionnel)</span></div>
+        <div class="step-desc">Exporté depuis Darwin → Comparaison Magasins pour le rayon souhaité. Active le bouton Classement Région DTF SUD EST.</div>
+        <div class="step-badge">Optionnel</div>
+      </div>
+    </div>
+    <div class="step fade-up d4">
+      <div class="step-num">4</div>
+      <div class="step-body">
+        <div class="step-title">Sélectionnez le rayon et cliquez Générer</div>
+        <div class="step-desc">Choisissez le rayon dans la liste déroulante. Le brief s'affiche instantanément avec les KPIs, consignes, points d'attention et classement.</div>
+        <div class="step-badge">Ctrl+S pour sauvegarder la journée</div>
       </div>
     </div>
   </div>
-</div>
+</section>
 
-<!-- MODAL EDIT CONSIGNES -->
-<div class="ov" id="ov-edt">
-  <div class="modal wide">
-    <div class="mh cyan"><span>⚙️ Modifier les consignes automatiques</span><button class="mclose" onclick="fov('ov-edt')">×</button></div>
-    <div class="mbody">
-      <p class="mnote">Modifications appliquées <strong>une seule fois</strong> au prochain brief. <strong>Laisser vide = supprimer</strong> cette consigne du brief.</p>
-      <div id="edit-c"></div>
-      <div class="mfoot"><button class="btn btn-blue" onclick="appEdit()">✓ Appliquer au prochain brief</button></div>
+<div class="divider layer"></div>
+
+<!-- ── Fichiers PDF attendus ──────────────────────── -->
+<section class="section layer" id="fichiers">
+  <div class="section-label">Sources Darwin</div>
+  <h2 class="section-title">Les 3 exports PDF requis</h2>
+  <p class="section-sub">
+    Tous issus de Darwin, export PDF journalier pour le magasin <strong>HF7152 — Narbonne</strong>.
+  </p>
+
+  <div class="files-grid">
+
+    <div class="file-card">
+      <div class="file-ico-wrap">📄</div>
+      <div class="file-info">
+        <div class="file-name">Performances_Globales_JJ.pdf</div>
+        <div class="file-desc">CA TTC, évolution N-1, écart budget, taux marge, diff marge, stocks négatifs, ruptures assortiment — tous rayons.</div>
+        <div class="file-opt">Obligatoire</div>
+      </div>
     </div>
+
+    <div class="file-card green">
+      <div class="file-ico-wrap">📊</div>
+      <div class="file-info">
+        <div class="file-name">CLASSEMENT_RAYONS_JJ.pdf</div>
+        <div class="file-desc">Rang CA national et évolution de rang pour chaque rayon du magasin. Permet d'afficher le classement national dans le brief.</div>
+        <div class="file-opt">Obligatoire</div>
+      </div>
+    </div>
+
+    <div class="file-card orange">
+      <div class="file-ico-wrap">🌍</div>
+      <div class="file-info">
+        <div class="file-name">COMPARAISON_MAGASINS_JJ.pdf</div>
+        <div class="file-desc">Classement des 31 magasins DTF SUD EST sur un rayon spécifique. Active le tableau régional dans le brief. Un PDF = un rayon.</div>
+        <div class="file-opt">Optionnel</div>
+      </div>
+    </div>
+
   </div>
-</div>
+
+  <div style="margin-top:20px;padding:16px 20px;background:rgba(245,158,11,.07);border:1px solid rgba(245,158,11,.2);border-radius:10px;font-size:13px;color:var(--muted);line-height:1.6">
+    <strong style="color:var(--orange)">⚠ Note :</strong> Le PDF Comparaison Magasins est spécifique à un seul rayon (ex: Confort de la Maison). 
+    Pour activer le Classement Région, vous devez sélectionner <strong style="color:var(--text)">le même rayon</strong> dans la liste déroulante. 
+    Le système détecte automatiquement le rayon du PDF chargé.
+  </div>
+</section>
+
+<div class="divider layer"></div>
+
+<!-- ── CTA bottom ─────────────────────────────────── -->
+<section class="cta-section layer">
+  <div class="cta-box">
+    <div class="cta-title">Prêt à générer votre brief ?</div>
+    <div class="cta-sub">
+      Chargez vos PDFs Darwin, sélectionnez votre rayon et obtenez
+      un brief complet, structuré et imprimable en moins de 10 secondes.
+    </div>
+    <a href="brief-journalier.html" class="btn-hero primary" style="display:inline-flex">
+      ▶ Ouvrir le Brief Journalier
+    </a>
+  </div>
+</section>
+
+<!-- ── Footer ─────────────────────────────────────── -->
+<footer class="footer layer">
+  <div class="footer-left">
+    <div class="logo-badge" style="width:28px;height:28px;font-size:13px">C</div>
+    <span><strong>HF7152</strong> — Narbonne · DTF SUD EST</span>
+    <div class="footer-dot"></div>
+    <span>Source : Darwin</span>
+    <div class="footer-dot"></div>
+    <span>Confidentiel Carrefour</span>
+  </div>
+  <div class="footer-links">
+    <a href="brief-journalier.html">Brief Journalier</a>
+    <a href="#fonctionnalites">Fonctionnalités</a>
+    <a href="#utilisation">Utilisation</a>
+  </div>
+</footer>
 
 <script>
-pdfjsLib.GlobalWorkerOptions.workerSrc =
-  'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.worker.min.js';
+/* ── Intersection Observer pour animations ──────── */
+var io = new IntersectionObserver(function(entries){
+  entries.forEach(function(e){
+    if(e.isIntersecting){
+      e.target.style.animationPlayState='running';
+      io.unobserve(e.target);
+    }
+  });
+},{threshold:.12});
 
-var META={
-  "1":{n:"1",nom:"PGC",par:"Alimentaire",t:"pgc"},
-  "2":{n:"2",nom:"PFT",par:"Alimentaire",t:"pft"},
-  "3":{n:"3",nom:"Bazar",par:"Non Alimentaire",t:"na"},
-  "4":{n:"4",nom:"EPCS",par:"Non Alimentaire",t:"na"},
-  "6":{n:"6",nom:"Textile",par:"Non Alimentaire",t:"na"},
-  "10":{n:"10",nom:"Boissons",par:"PGC",t:"pgc"},
-  "11":{n:"11",nom:"Droguerie",par:"PGC",t:"pgc"},
-  "12":{n:"12",nom:"Parfumerie Hygiène",par:"PGC",t:"pgc"},
-  "14":{n:"14",nom:"Épicerie",par:"PGC",t:"pgc"},
-  "19":{n:"19",nom:"Parapharmacie",par:"PGC",t:"pgc"},
-  "20":{n:"20",nom:"Charcuterie / Traiteur",par:"PFT",t:"pft"},
-  "21":{n:"21",nom:"Poissonnerie",par:"PFT",t:"pft"},
-  "22":{n:"22",nom:"Fruits et Légumes",par:"PFT",t:"pft"},
-  "23":{n:"23",nom:"Boulangerie / Pâtisserie",par:"PFT",t:"pft"},
-  "24":{n:"24",nom:"Boucherie Volaille",par:"PFT",t:"pft"},
-  "25":{n:"25",nom:"PLS (Libre Service)",par:"PFT",t:"pls"},
-  "30":{n:"30",nom:"Bricolage",par:"Bazar",t:"na"},
-  "31":{n:"31",nom:"Confort de la Maison",par:"Bazar",t:"na"},
-  "32":{n:"32",nom:"Papeterie",par:"Bazar",t:"na"},
-  "33":{n:"33",nom:"Jouet Sport",par:"Bazar",t:"na"},
-  "34":{n:"34",nom:"Jardin et Animalerie",par:"Bazar",t:"na"},
-  "35":{n:"35",nom:"Auto",par:"Bazar",t:"na"},
-  "8X":{n:"8X",nom:"Culture",par:"Bazar",t:"na"},
-  "40":{n:"40",nom:"GEM",par:"EPCS",t:"na"},
-  "41":{n:"41",nom:"PEM",par:"EPCS",t:"na"},
-  "42":{n:"42",nom:"Photo Communication",par:"EPCS",t:"na"},
-  "43":{n:"43",nom:"Image et Son",par:"EPCS",t:"na"},
-  "44":{n:"44",nom:"Micro Informatique",par:"EPCS",t:"na"},
-  "45":{n:"45",nom:"Radiotéléphonie",par:"EPCS",t:"na"},
-  "60":{n:"60",nom:"Chaussure",par:"Textile",t:"na"},
-  "61":{n:"61",nom:"Bébé",par:"Textile",t:"na"},
-  "62":{n:"62",nom:"Enfant",par:"Textile",t:"na"},
-  "63":{n:"63",nom:"Femme",par:"Textile",t:"na"},
-  "64":{n:"64",nom:"Homme",par:"Textile",t:"na"},
-  "65":{n:"65",nom:"Linge de Maison",par:"Textile",t:"na"},
-  "66":{n:"66",nom:"Accessoires",par:"Textile",t:"na"},
-  "67":{n:"67",nom:"Bijouterie",par:"Textile",t:"na"},
-  "ALI":{n:"ALI",nom:"Alimentaire",par:"Magasin",t:"pgc"},
-  "NALI":{n:"NALI",nom:"Non Alimentaire",par:"Magasin",t:"na"}
-};
-
-var DATE_STR='',D={},REG={},SHOT=null;
-var mOp1='',mOp2='',mCl='';
-var rayonK=null,RAYON_COMPAR_KEY=null;
-
-Object.keys(META).forEach(function(k){
-  D[k]={ca:0,ev:0,bud:0,taux:0,dm:0,rang:0,er:0,stk:0,rupt:0};
+document.querySelectorAll('.fade-up').forEach(function(el){
+  el.style.animationPlayState='paused';
+  io.observe(el);
 });
 
-var NOM_PG={
-  "1":"PGC","2":"P.F.T","3":"BAZAR","4":"EPCS","6":"TEXTILE",
-  "10":"BOISSONS","11":"DROGUERIE","12":"PARFUMERIE","14":"EPICERIE","19":"PARAPHARMACIE",
-  "20":"CHARCUT","21":"POISSONNERIE","22":"FRUITS","23":"BOULANGERIE","24":"BOUCHERIE","25":"P.L.S",
-  "30":"BRICOLAGE","31":"CONFORT","32":"PAPETERIE","33":"JOUET","34":"JARDIN","35":"AUTO",
-  "8X":"CULTURE","40":"GEM","41":"PEM","42":"PHOTO","43":"IMAGE","44":"MICRO","45":"RADIO",
-  "60":"CHAUSSURE","61":"BEBE","62":"ENFANT","63":"FEMME","64":"HOMME",
-  "65":"LINGE","66":"ACCESS","67":"BIJOUTERIE"
-};
-
-var RE_NUM=/^(10|11|12|14|19|20|21|22|23|24|25|30|31|32|33|34|35|40|41|42|43|44|45|60|61|62|63|64|65|66|67|8X|1|2|3|4|6)\s/i;
-
-// ── Lecture PDF ────────────────────────────────────
-function lirePDF(file){
-  return new Promise(function(res,rej){
-    var rd=new FileReader();
-    rd.onerror=rej;
-    rd.onload=function(e){
-      pdfjsLib.getDocument({data:new Uint8Array(e.target.result)}).promise
-        .then(function(pdf){
-          var pp=[];
-          for(var pi=1;pi<=pdf.numPages;pi++){
-            pp.push(pdf.getPage(pi).then(function(pg){
-              return pg.getTextContent().then(function(tc){
-                var items=tc.items.filter(function(it){return it.str&&it.str.trim();});
-                if(!items.length) return '';
-                items.sort(function(a,b){
-                  var dy=b.transform[5]-a.transform[5];
-                  if(Math.abs(dy)>6) return dy>0?1:-1;
-                  return a.transform[4]-b.transform[4];
-                });
-                var lignes=[],curY=null,curLine=[];
-                items.forEach(function(it){
-                  var y=it.transform[5];
-                  if(curY===null||Math.abs(y-curY)>6){
-                    if(curLine.length) lignes.push(curLine.join(' '));
-                    curLine=[it.str.trim()]; curY=y;
-                  } else { curLine.push(it.str.trim()); }
-                });
-                if(curLine.length) lignes.push(curLine.join(' '));
-                return lignes.join('\n');
-              });
-            }));
-          }
-          Promise.all(pp).then(function(pages){res(pages.join('\n'));}).catch(rej);
-        }).catch(rej);
-    };
-    rd.readAsArrayBuffer(file);
-  });
-}
-
-// ── Lecture PDF avec coordonnées X,Y brutes (parsing géométrique) ──
-// Retourne les items {text, x, y} sans reconstruction de lignes texte.
-// Utilisé uniquement pour extraire Rang CA et Évol Rang par position de colonne.
-function lirePDFItems(file){
-  return new Promise(function(res,rej){
-    var rd=new FileReader();
-    rd.onerror=rej;
-    rd.onload=function(e){
-      pdfjsLib.getDocument({data:new Uint8Array(e.target.result)}).promise
-        .then(function(pdf){
-          var pp=[];
-          for(var pi=1;pi<=pdf.numPages;pi++){
-            pp.push(pdf.getPage(pi).then(function(pg){
-              return pg.getTextContent().then(function(tc){
-                return tc.items
-                  .filter(function(it){return it.str&&it.str.trim();})
-                  .map(function(it){return{text:it.str.trim(),x:it.transform[4],y:it.transform[5]};});
-              });
-            }));
-          }
-          Promise.all(pp).then(function(pages){
-            var all=[];
-            pages.forEach(function(p){all=all.concat(p);});
-            res(all);
-          }).catch(rej);
-        }).catch(rej);
-    };
-    rd.readAsArrayBuffer(file);
-  });
-}
-// BUG 3 : pN — supporte nombres français avec espaces insécables (ex: "1 234,56")
-function pN(s){
-  // Supprimer uniquement espaces insécables entre chiffres, pas tous les espaces
-  return parseFloat(
-    String(s)
-      .replace(/[\u00a0\u202f]/g,'') // espaces insécables uniquement
-      .replace(/(\d)\s(\d)/g,'$1$2') // espaces normaux ENTRE chiffres uniquement
-      .replace(',','.')
-  )||0;
-}
-// BUG 4 : getNums — normalise tirets unicode + regex simplifiée (sans [\d\s]* dangereux)
-function getNums(txt){
-  var r=[],m;
-  var norm=txt.replace(/[\u2212\u2013\u2014]/g,'-'); // −, –, — → -
-  // BUG 2 FIX : regex sans [\d\s]* qui capturait les espaces entre nombres distincts
-  var re=/(-?\d+[,.]\d+|-?\d+)/g;
-  while((m=re.exec(norm))!==null){
-    var v=pN(m[1]);
-    if(!isNaN(v)) r.push(v);
-  }
-  return r;
-}
-// BUG 10 + BUG 1 FIX : normOCR — NE remplace plus 0→O (cassait les codes rayons 10,20,30...)
-// Normalisation limitée aux seuls cas vraiment utiles en OCR
-function normOCR(s){
-  return String(s).toUpperCase()
-    .replace(/[lI]/g,'I') // l minuscule et I majuscule confondus
-    .replace(/\s+/g,' ')
-    .trim();
-}
-function trouverDate(txt){
-  var m=txt.match(/(\d{2})\/(\d{2})\/(\d{4})/);
-  if(!m) return '';
-  var j=m[1],mo=m[2],a=m[3];
-  var jj=['Dimanche','Lundi','Mardi','Mercredi','Jeudi','Vendredi','Samedi'];
-  var dt=new Date(a+'-'+mo+'-'+j);
-  return 'Journée du '+(isNaN(dt.getTime())?'':jj[dt.getDay()]+' ')+j+'/'+mo+'/'+a;
-}
-
-// ══════════════════════════════════════════════════
-// PARSERS — Approche hybride : OCR texte + géométrique pour le Rang
-// OCR texte : CA, Evol, Budget, Taux, Marge, Stk, Rupt
-// Géométrique (parserRayonsGeom) : Rang CA + Évol Rang uniquement
-// ══════════════════════════════════════════════════
-
-// ── Parser Performances Globales ─────────────────────────────────────────
-// Approche OCR texte avec fusion de lignes — fiable et éprouvée
-function parserPerf(txt){
-  // BUG 4 : normaliser tirets unicode avant parsing
-  txt=txt.replace(/[\u2212\u2013\u2014]/g,'-');
-  var date=trouverDate(txt);
-  if(date){DATE_STR=date;document.getElementById('hdr-date').textContent=date;}
-  var lines=txt.split('\n'),n=lines.length;
-  for(var i=0;i<n;i++){
-    var ligne=lines[i].trim();if(!ligne)continue;
-    var numM=ligne.match(RE_NUM);if(!numM)continue;
-    var num=numM[1].toUpperCase();
-    if(!D[num]||!NOM_PG[num])continue;
-    // BUG 10 : matching OCR-safe (0→O, l→I) pour les noms de rayons
-    if(normOCR(ligne).indexOf(normOCR(NOM_PG[num]))===-1)continue;
-    // Fusion lignes de continuation (max 5 — protection contre absorption inter-rayons)
-    var merged=ligne;
-    for(var x=1;x<=5&&i+x<n;x++){
-      var nxt=lines[i+x].trim();if(!nxt)continue;
-      var nxtM=nxt.match(RE_NUM);
-      if(nxtM){var nn=nxtM[1].toUpperCase();if(NOM_PG[nn]&&nxt.toUpperCase().indexOf(NOM_PG[nn])!==-1)break;}
-      if(/\d/.test(nxt))merged+=' '+nxt;
-    }
-    var ns=getNums(merged);if(ns.length<7)continue;
-    var d=D[num];
-
-    // CA : valider plage réaliste (0–5000 K€)
-    var ca=Math.abs(ns[1]);
-    if(ca>0&&ca<5000) d.ca=ca; else{console.warn('[PERF] '+num+' CA suspect: '+ca);continue;}
-
-    d.ev=ns[2]; d.bud=ns[3];
-
-    // TAUX MARGE : chercher dans ns[5..8] le premier valeur dans [1,90]
-    // ns[4]=Poids% ns[5]=Poids Cata% ns[6]=Taux ns[7]=Diff%N-1
-    // Mais si Poids Cata absent : ns[5]=Taux, ns[6]=Diff
-    var taux=0,dm=0,found=false;
-    for(var ti=5;ti<=Math.min(8,ns.length-1)&&!found;ti++){
-      if(ns[ti]>=1&&ns[ti]<=90){
-        // Vérifier que la valeur précédente ressemble à un Poids% (0-100)
-        // pour s'assurer qu'on n'est pas en train de lire Poids Cata
-        taux=ns[ti]; dm=ns[ti+1]||0; found=true;
-      }
-    }
-    if(found){d.taux=taux;d.dm=dm;}
-    else{console.warn('[PERF] '+num+' taux introuvable — ns='+JSON.stringify(ns.slice(0,10)));}
-
-    // STK / RUPT : entiers ≥0 et <5000 depuis la queue
-    var trail=[];
-    for(var j=2;j<ns.length;j++){var v=ns[j];if(v===Math.round(v)&&v>=0&&v<5000)trail.push(v);}
-    var typ=META[num]?META[num].t:'na';
-    if(typ==='pft'){
-      // PFT : premier entier = stocks négatifs, pas de rupture catalogue
-      d.stk=trail.length>=1?trail[0]:0; d.rupt=0;
-    }else if(trail.length>=3){
-      d.stk=trail[trail.length-3]; d.rupt=trail[trail.length-2];
-    }else if(trail.length===2){d.stk=trail[0];d.rupt=trail[1];}
-    else if(trail.length===1){d.rupt=trail[0];d.stk=0;}
-    else{d.stk=0;d.rupt=0;}
-
-    // Validation finale : si stk ou rupt semblent anormaux, ignorer
-    if(d.stk>3000){console.warn('[PERF] '+num+' stk suspect: '+d.stk);d.stk=0;}
-    if(d.rupt>3000){console.warn('[PERF] '+num+' rupt suspect: '+d.rupt);d.rupt=0;}
-
-    console.log('[PERF] '+num+' ca='+d.ca+' ev='+d.ev+' bud='+d.bud+' taux='+d.taux+' dm='+d.dm+' stk='+d.stk+' rupt='+d.rupt);
-  }
-  // BUG 9 : compter les rayons extraits, warn si aucun
-  var nbPerf=Object.keys(D).filter(function(k){return D[k].ca>0;}).length;
-  if(nbPerf===0) console.warn('[PERF] Aucun rayon extrait — vérifiez le PDF Performances Globales');
-  else console.log('[PERF] '+nbPerf+' rayons extraits');
-}
-
-// ── Parser Classement Rayons — OCR texte ───────────
-function parserRayons(txt){
-  // BUG 4 : normaliser tirets unicode
-  txt=txt.replace(/[\u2212\u2013\u2014]/g,'-');
-  // BUG 8 FIX : reset rang/er uniquement pour les rayons du classement (NOM_PG)
-  // Ne pas toucher à ALI/NALI qui n'ont pas de rang
-  Object.keys(NOM_PG).forEach(function(k){if(D[k]){D[k].rang=0;D[k].er=0;}});
-  var lines=txt.split('\n'),n=lines.length;
-  for(var i=0;i<n;i++){
-    var ligne=lines[i].trim();if(!ligne)continue;
-    var numM=ligne.match(RE_NUM);if(!numM)continue;
-    var num=numM[1].toUpperCase();
-    if(!D[num]||!NOM_PG[num])continue;
-    // BUG 10 : matching OCR-safe
-    if(normOCR(ligne).indexOf(normOCR(NOM_PG[num]))===-1)continue;
-    // Fusion étendue (10 lignes) — nécessaire car Darwin fragmente les barres graphiques
-    var merged=ligne;
-    for(var x=1;x<=10&&i+x<n;x++){
-      var nxt=lines[i+x].trim();if(!nxt)continue;
-      var nxtM=nxt.match(RE_NUM);
-      // Stopper uniquement sur un VRAI nouveau rayon (code + nom)
-      if(nxtM){var nn=nxtM[1].toUpperCase();if(NOM_PG[nn]&&nxt.toUpperCase().indexOf(NOM_PG[nn])!==-1)break;}
-      if(/\d/.test(nxt))merged+=' '+nxt;
-    }
-    var ns=getNums(merged);if(ns.length<5)continue;
-    // Scan depuis ns[4] — 1er entier ∈ [1,300] = Rang CA, suivant = Évol Rang
-    // Les valeurs CA/Evol/Budget Darwin ont toujours une décimale → non entiers
-    var rang=0,er=0;
-    for(var ri=4;ri<ns.length;ri++){
-      if(ns[ri]===Math.round(ns[ri])&&ns[ri]>=1&&ns[ri]<=300){
-        rang=Math.round(ns[ri]);
-        // er peut être négatif ou nul
-        var erRaw=ns[ri+1];
-        if(erRaw!==undefined&&erRaw===Math.round(erRaw)&&Math.abs(erRaw)<=300) er=Math.round(erRaw);
-        break;
-      }
-    }
-    // Validation : rang doit être cohérent (1-300)
-    if(rang<1||rang>300){console.warn('[RAYONS] '+num+' rang invalide: '+rang);continue;}
-    var d=D[num];
-    d.rang=rang; d.er=er;
-    console.log('[RAYONS] '+num+' rang='+rang+' er='+er);
-  }
-}
-
-// ── Parser géométrique — Rang CA + Évol Rang uniquement ──
-// Override ciblé : écrase d.rang et d.er avec les valeurs lues par position X/Y
-// Corrige les cas où PDF.js split "60,1%" en "60" et "1%" → faux rang
-function parserRayonsGeom(items){
-  var TOL_Y=22,TOL_X=60; // tolérances légèrement élargies pour Darwin
-  var rows=[];
-  items.forEach(function(it){
-    if(!it.text||!it.text.trim())return;
-    var placed=false;
-    for(var ri=0;ri<rows.length;ri++){
-      if(Math.abs(rows[ri].y-it.y)<=TOL_Y){rows[ri].items.push(it);placed=true;break;}
-    }
-    if(!placed)rows.push({y:it.y,items:[it]});
-  });
-  rows.sort(function(a,b){return b.y-a.y;});
-
-  // Détecter X colonne Rang CA — plusieurs patterns Darwin possibles
-  var xRang=-1,xEvol=-1;
-  var RANG_RE=/^(RANG(\s*CA)?|RANG\s*CA|RANG$)$/i;
-  var EVOL_RE=/^[EÉ]VOL/i;
-  rows.forEach(function(row){
-    row.items.forEach(function(it){
-      if(xRang<0&&RANG_RE.test(it.text.trim()))xRang=it.x;
-    });
-  });
-  // Fallback : chercher "Rang" seul si pattern strict échoue
-  if(xRang<0){
-    rows.forEach(function(row){
-      row.items.forEach(function(it){
-        if(xRang<0&&/rang/i.test(it.text.trim())&&it.text.trim().length<10)xRang=it.x;
-      });
-    });
-  }
-  if(xRang>=0){
-    rows.forEach(function(row){
-      row.items.forEach(function(it){
-        if(xEvol<0&&it.x>xRang+10&&EVOL_RE.test(it.text.trim()))xEvol=it.x;
-      });
-    });
-  }
-  if(xRang<0){console.log('[GEOM] Colonne Rang non trouvée — OCR seul utilisé');return;}
-  console.log('[GEOM] xRang='+Math.round(xRang)+' xEvol='+Math.round(xEvol));
-
-  // Index plats avec exclusivité — entiers uniquement
-  var colRang=[],colEvol=[];
-  items.forEach(function(it){
-    if(!it.text||!it.text.trim())return;
-    var v=parseFloat(it.text.replace(',','.').replace('%',''));
-    if(isNaN(v)||v!==Math.round(v))return;
-    if(Math.abs(it.x-xRang)<=TOL_X&&v>=1&&v<=300)
-      colRang.push({y:it.y,v:Math.round(v),used:false});
-    if(xEvol>0&&Math.abs(it.x-xEvol)<=TOL_X&&Math.abs(v)<=300)
-      colEvol.push({y:it.y,v:Math.round(v),used:false});
-  });
-
-  if(colRang.length===0){console.warn('[GEOM] Aucun entier dans colonne Rang — OCR seul conservé');return;}
-
-  // Identifier lignes rayon (avec déduplication)
-  var rayons=[],usedNums={};
-  rows.forEach(function(row){
-    var txt=row.items.map(function(it){return it.text;}).join(' ').toUpperCase();
-    var numM=txt.match(RE_NUM);if(!numM)return;
-    var num=numM[1].toUpperCase();
-    if(!D[num]||!NOM_PG[num]||usedNums[num])return;
-    if(txt.indexOf(NOM_PG[num])===-1)return;
-    usedNums[num]=true;
-    rayons.push({num:num,y:row.y});
-  });
-  rayons.sort(function(a,b){return b.y-a.y;});
-
-  // Association exclusive : chaque item de colonne attribué au rayon le plus proche
-  rayons.forEach(function(rn){
-    var bestR=null,bestRD=9999;
-    colRang.forEach(function(c){
-      if(c.used)return;
-      var dist=Math.abs(c.y-rn.y);
-      if(dist<bestRD){bestRD=dist;bestR=c;}
-    });
-    var bestE=null,bestED=9999;
-    colEvol.forEach(function(c){
-      if(c.used)return;
-      var dist=Math.abs(c.y-rn.y);
-      if(dist<bestED){bestED=dist;bestE=c;}
-    });
-    var rang=0,er=0;
-    // Tolérance d'association : max 40px en Y
-    if(bestR&&bestRD<=40){rang=bestR.v;bestR.used=true;}
-    if(bestE&&bestED<=40){er=bestE.v;bestE.used=true;}
-    if(rang>=1&&rang<=300){
-      D[rn.num].rang=rang;
-      D[rn.num].er=er;
-      console.log('[GEOM] '+rn.num+' rang='+rang+' er='+er+' dY='+Math.round(bestRD));
-    } else {
-      console.warn('[GEOM] '+rn.num+' rang non trouvé (dY='+Math.round(bestRD)+') — OCR conservé: rang='+D[rn.num].rang);
-    }
-  });
-}
-
-// ── Handlers fichiers ──────────────────────────────
-function setupF(id,lbId,fnId,parser){
-  document.getElementById(id).addEventListener('change',function(){
-    var f=this.files[0];if(!f)return;
-    document.getElementById(fnId).textContent=f.name;
-    document.getElementById(lbId).classList.add('ok');
-    setStat('\u23f3 Lecture de '+f.name+'\u2026','');
-    lirePDF(f).then(function(txt){
-      parser(txt);
-      setStat('\u2713 '+f.name+(DATE_STR?' \u2014 '+DATE_STR:''),'ok');
-    }).catch(function(e){
-      console.error(e);
-      document.getElementById(lbId).classList.remove('ok');
-      setStat('\u26a0 Erreur lecture '+f.name,'err');
-    });
-  });
-}
-setupF('f-p','lb-p','fn-p',function(txt){
-  parserPerf(txt);
-  // BUG 9 : vérifier que des données ont été extraites
-  var nb=Object.keys(D).filter(function(k){return D[k].ca>0;}).length;
-  if(nb===0){
-    setStat('⚠ PDF chargé mais aucune donnée extraite — vérifiez le fichier','err');
-    document.getElementById('lb-p').classList.remove('ok');
-  }
-});
-// f-r : OCR pour les données + géométrique pour Rang uniquement
-document.getElementById('f-r').addEventListener('change',function(){
-  var f=this.files[0];if(!f)return;
-  document.getElementById('fn-r').textContent=f.name;
-  document.getElementById('lb-r').classList.add('ok');
-  setStat('\u23f3 Lecture classement rayons\u2026','');
-  lirePDF(f).then(function(txt){
-    parserRayons(txt);
-    return lirePDFItems(f);
-  }).then(function(items){
-    parserRayonsGeom(items);
-    setStat('\u2713 '+document.getElementById('fn-r').textContent+(DATE_STR?' \u2014 '+DATE_STR:''),'ok');
-  }).catch(function(e){
-    console.error(e);
-    document.getElementById('lb-r').classList.remove('ok');
-    setStat('\u26a0 Erreur lecture classement rayons','err');
+/* ── Smooth scroll nav ───────────────────────────── */
+document.querySelectorAll('a[href^="#"]').forEach(function(a){
+  a.addEventListener('click',function(e){
+    var id=this.getAttribute('href').slice(1);
+    var el=document.getElementById(id);
+    if(el){ e.preventDefault(); el.scrollIntoView({behavior:'smooth',block:'start'}); }
   });
 });
-// ── Bouton Classement Région ───────────────────────
-function majBtnReg(){
-  var btn=document.getElementById('btn-reg');
-  var inf=document.getElementById('inf-reg');
-  var sel=document.getElementById('sel').value;
-  if(!RAYON_COMPAR_KEY){btn.disabled=true;if(inf)inf.innerHTML='';return;}
-  var nomPDF=META[RAYON_COMPAR_KEY]?META[RAYON_COMPAR_KEY].nom:RAYON_COMPAR_KEY;
-  if(!sel){
-    btn.disabled=true;
-    if(inf)inf.innerHTML='<span style="color:var(--cyan)">📊 PDF Comparaison chargé : <strong>Rayon '+RAYON_COMPAR_KEY+' — '+nomPDF+'</strong> — Sélectionnez ce rayon pour activer.</span>';
-    return;
+
+/* ── Stats animées au scroll ─────────────────────── */
+function animateVal(el, target, decimals, suffix){
+  var start=0, dur=900, t0=null;
+  function step(ts){
+    if(!t0) t0=ts;
+    var p=Math.min((ts-t0)/dur,1);
+    var ease=1-Math.pow(1-p,3);
+    var cur=start+(target-start)*ease;
+    el.textContent=(decimals?cur.toFixed(decimals):Math.round(cur))+(suffix||'');
+    if(p<1) requestAnimationFrame(step);
   }
-  if(sel===RAYON_COMPAR_KEY){
-    btn.disabled=false;
-    if(inf)inf.innerHTML='<span style="color:var(--green)">✅ Classement Région disponible — <strong>Rayon '+RAYON_COMPAR_KEY+' — '+nomPDF+'</strong></span>';
-  } else {
-    var nomSel=META[sel]?META[sel].nom:sel;
-    btn.disabled=true;
-    if(inf)inf.innerHTML='<span style="color:var(--orange)">⚠ PDF Comparaison = <strong>Rayon '+RAYON_COMPAR_KEY+' ('+nomPDF+')</strong> · Rayon sélectionné = <strong>'+sel+' ('+nomSel+')</strong> — Sélectionnez le même rayon pour activer.</span>';
-  }
+  requestAnimationFrame(step);
 }
 
-// ── Parser Comparaison Magasins ────────────────────
-var MAP_COMPAR=[
-  [/CONFORT\s+DE\s+LA/i,"31"],[/RADIOTELEPHONIE/i,"45"],[/POISSONNERIE/i,"21"],
-  [/PARAPHARMACIE/i,"19"],[/MICRO\s+INFO/i,"44"],[/BOULANGERIE/i,"23"],
-  [/BOUCHERIE/i,"24"],[/BIJOUTERIE/i,"67"],[/CHARCUT/i,"20"],
-  [/DROGUERIE/i,"11"],[/CHAUSSURE/i,"60"],[/PARFUMERIE/i,"12"],
-  [/BRICOLAGE/i,"30"],[/PAPETERIE/i,"32"],[/BOISSONS/i,"10"],
-  [/EPICERIE/i,"14"],[/IMAGE\s+ET\s+SON/i,"43"],[/IMAGE/i,"43"],
-  [/JARDIN/i,"34"],[/JOUET/i,"33"],[/LINGE/i,"65"],
-  [/ACCESSOIRES/i,"66"],[/FEMME/i,"63"],[/ENFANT/i,"62"],
-  [/HOMME/i,"64"],[/PHOTO/i,"42"],[/\bAUTO\b/i,"35"],
-  [/CULTURE/i,"8X"],[/\bGEM\b/i,"40"],[/\bPEM\b/i,"41"],
-  [/B[EÉ]B[EÉ]/i,"61"],[/P\.?L\.?S/i,"25"],[/FRUITS/i,"22"],
-  [/\bPGC\b/i,"1"],[/P\.?F\.?T/i,"2"],[/BAZAR/i,"3"],
-  [/\bEPCS\b/i,"4"],[/TEXTILE/i,"6"]
-];
-var EXCL_C=['DTF','CLASSEMENT','CHIFFRE','MAGASIN','PERIODE','SOURCE','DARWIN',
-  'NAVIGATION','COMPARAISON','ACCUEIL','PERFORMANCES','CAJ','EXCELLENCE',
-  'DEMARQUES','GLOSSAIRE','CONTACTEZ','RAYON','PANIER','VALEUR','DEBITS',
-  'NOMBRE','EVOLUTION','JOUR','DECROISSANT','PAS DE TRI'];
-
-function parserCompar(txt){
-  // BUG 4 : normaliser tirets unicode
-  txt=txt.replace(/[\u2212\u2013\u2014]/g,'-');
-  // BUG 4 : normaliser espaces insécables dans les nombres
-  txt=txt.replace(/(\d)[\u00a0\u202f](\d)/g,'$1$2');
-
-  var kk=null;
-  for(var ci=0;ci<MAP_COMPAR.length;ci++){
-    if(MAP_COMPAR[ci][0].test(txt)){kk=MAP_COMPAR[ci][1];break;}
-  }
-  if(!kk){setStat('⚠ Rayon non reconnu dans le PDF Comparaison','err');majBtnReg();return;}
-
-  RAYON_COMPAR_KEY=kk;
-  // BUG 8 : reset propre avant rechargement
-  REG[kk]={dtf:{ca:0,ev:0,deb:0,pan:0},mags:[]};
-  var reg=REG[kk];
-
-  // FIX DTF — extraction robuste de la ligne "DTF SUD EST"
-  // Problèmes identifiés :
-  //   1. "23 204" (espace milliers français) → getNums voit [23, 204] au lieu de [23204]
-  //   2. PDF.js fragmente la ligne DTF sur plusieurs lignes (▲▼ ont leur propre Y)
-  // Solution :
-  //   a. Fusionner les lignes jusqu'à avoir ≥6 nombres (CA + Evol + Deb + Evol + Panier + Evol)
-  //   b. Normaliser les espaces entre chiffres AVANT getNums
-  var dtfLine='';
-  var txtLines=txt.split('\n');
-  for(var dli=0;dli<txtLines.length;dli++){
-    if(/DTF\s+SUD\s+EST/i.test(txtLines[dli])){
-      dtfLine=txtLines[dli];
-      // Fusionner les lignes suivantes jusqu'à avoir 6+ chiffres ou atteindre un vrai nom de magasin
-      for(var dlj=1;dlj<=10&&dli+dlj<txtLines.length;dlj++){
-        var nxtD=txtLines[dli+dlj].trim();
-        if(!nxtD) continue;
-        // Stopper sur une ligne qui commence par un nom de magasin (lettre + lettre, pas un chiffre)
-        // et qui contient un chiffre (= ligne de données magasin)
-        if(/^[A-Za-zÀ-ÿ]{2}/.test(nxtD)&&/\d/.test(nxtD)&&!/^DTF/i.test(nxtD)) break;
-        if(/\d/.test(nxtD)) dtfLine+=' '+nxtD;
-        // Arrêter si on a collecté assez de nombres (au moins 6)
-        if(getNums(dtfLine.replace(/(\d)\s+(\d)/g,'$1$2')).length>=6) break;
-      }
-      break;
-    }
-  }
-
-  if(dtfLine){
-    // CORRECTION CLÉ : normaliser les espaces entre chiffres AVANT getNums
-    // "23 204" → "23204", "1 648" → "1648"
-    var dtfNorm=dtfLine.replace(/(\d)\s+(\d)/g,'$1$2');
-    var dtfNums=getNums(dtfNorm);
-    // Structure Darwin DTF : CA(K€)  Evol%  Debits(entier)  EvolDebits%  Panier(€)  EvolPanier%
-    if(dtfNums.length>=3){
-      reg.dtf.ca=Math.abs(dtfNums[0])||0;
-      reg.dtf.ev=dtfNums[1]||0;
-      // Débits : 1er entier >= 100 (après CA et Evol%)
-      var debFound=false;
-      for(var dii=2;dii<dtfNums.length;dii++){
-        var dv=dtfNums[dii];
-        if(dv===Math.round(dv)&&dv>=100){
-          reg.dtf.deb=Math.round(dv); debFound=true;
-          // Panier : 1er décimal dans [0.5,50] après les débits
-          for(var pii=dii+1;pii<dtfNums.length;pii++){
-            var pv=Math.abs(dtfNums[pii]);
-            if(pv>=0.5&&pv<=50){reg.dtf.pan=pv;break;}
-          }
-          break;
-        }
-      }
-      if(!debFound) console.warn('[COMPAR] DTF débits non trouvés — nums='+JSON.stringify(dtfNums));
-      console.log('[COMPAR] DTF ca='+reg.dtf.ca+' ev='+reg.dtf.ev+' deb='+reg.dtf.deb+' pan='+reg.dtf.pan+' (ligne: '+dtfNorm.substring(0,80)+')');
-    } else {
-      console.warn('[COMPAR] DTF nombres insuffisants ('+dtfNums.length+'): '+JSON.stringify(dtfNums));
-    }
-  } else {
-    console.warn('[COMPAR] Ligne DTF SUD EST non trouvée dans le PDF');
-  }
-
-  var nbMags=0;
-  txt.split('\n').forEach(function(ligne){
-    ligne=ligne.trim();
-    if(!ligne||ligne.length<4) return;
-    var lu=ligne.toUpperCase();
-    if(EXCL_C.some(function(ex){return lu.indexOf(ex)!==-1;})) return;
-    if(!/^[A-Za-zÀ-ÿ]/.test(ligne)) return;
-    var m=ligne.match(/^([A-Za-zÀ-ÿ][A-Za-zÀ-ÿ0-9\s\-\'\.]{1,30}?)\s+(\d{1,2})\s+([\d,]+)\s+([-\d,]+)%/);
-    if(!m) return;
-    var nom=m[1].trim(),rang=parseInt(m[2]),ca=pN(m[3]),ev=pN(m[4]);
-    // BUG 7 : seuils assouplis (ca<=1000 au lieu de <=50, rang<=200 au lieu de <=40)
-    if(rang<1||rang>200||ca<=0||ca>1000||nom.length<3) return;
-    var suite=ligne.substring(m[0].length).trim();
-    var sn=getNums(suite);
-    var deb=0,pan=0;
-    var dm2=suite.match(/\b([12])\s+(\d{3})\b/);
-    if(dm2){deb=parseInt(dm2[1])*1000+parseInt(dm2[2]);pan=sn.length>3?sn[3]:0;}
-    else{deb=sn.length>0?Math.round(Math.abs(sn[0])):0;pan=sn.length>2?sn[2]:0;}
-    // BUG 7 : panier <= 5000 au lieu de <= 15
-    if(pan<0||pan>5000) pan=0;
-    var exists=reg.mags.some(function(x){return x.rang===rang;});
-    if(!exists){reg.mags.push({rang:rang,nom:nom,ca:ca,ev:ev,deb:deb,pan:pan,isMe:/NARBONNE/i.test(nom)});nbMags++;}
-  });
-
-  reg.mags.sort(function(a,b){return a.rang-b.rang;});
-
-  // BUG 9 : warning UI si aucun magasin extrait
-  if(nbMags===0){
-    console.warn('[COMPAR] Aucun magasin extrait du PDF comparaison');
-    setStat('⚠ PDF Comparaison chargé mais aucun magasin extrait — vérifiez le fichier','err');
-  } else {
-    console.log('[COMPAR] '+nbMags+' magasins extraits pour rayon '+kk);
-  }
-  majBtnReg();
-}
-setupF('f-c','lb-c','fn-c',parserCompar);
-function setStat(msg,cls){var el=document.getElementById('stat');el.textContent=msg;el.className='stat '+(cls||'');}
-
-// ── Consignes ──────────────────────────────────────
-function rnd(arr){return arr[Math.floor(Math.random()*arr.length)];}
-var CV={
-  pgc_o1:["Contrôle DLC / DDM : Tour du rayon, retirer tout produit périmé. Priorité aux bas-de-rayon et têtes de gondole.","Vérification des dates : Parcourir l'ensemble du linéaire, écarter les produits arrivés à date. Attention aux zones basses.","Tour DLC / DDM : Retirer sans exception tout article périmé. Insister sur les emplacements difficiles d'accès."],
-  pgc_o2:["Ruptures : Pour chaque trou — vérifier le stock, corriger si erroné, passer 1 carton commande client pour relancer l'automatique, ajuster le SMP si besoin.","Chasse aux ruptures : Repérer chaque référence manquante, corriger les stocks, relancer via 1 carton commande client et revoir le SMP.","Tour des ruptures : Identifier les emplacements vides, corriger le stock, commander 1 carton pour réamorcer la commande automatique, ajuster le SMP si nécessaire."],
-  pgc_o3:["SMP : Sur les références en rupture, s'assurer que le Stock Mini Permanent reflète la rotation réelle. Corriger les SMP à 0 ou sous-dimensionnés.","Mise à jour des SMP : Vérifier que le SMP est adapté à la vitesse d'écoulement. Revaloriser si insuffisant.","SMP à ajuster : Après traitement des ruptures, contrôler que les minima correspondent à la réalité. Relever ceux qui sont à 0 ou trop bas."],
-  pgc_c1:["Réserve : Évacuer cartons et emballages vides, ranger proprement, s'assurer que les allées restent dégagées.","Rangement réserve : Désencombrer les allées, retirer les emballages inutiles, vérifier l'accès libre aux issues.","Réserve : Sortir les cartons vides, libérer les passages, ranger les produits de façon ordonnée."],
-  pgc_c2:["Linéaire : Contrôler chaque étagère, redresser les articles déplacés, vérifier la stabilité des tablettes.","Vérification étagères : Repositionner les articles tombés ou mal alignés, s'assurer que les rayonnages sont en bon état.","Tour des rayonnages : Redresser ce qui est renversé ou mal placé, contrôler l'état et la propreté des tablettes."],
-  pgc_c3:["Facing : Remettre tous les produits face-client, boucher les trous de présentation, vérifier les étiquettes de prix.","Tenue du rayon : Facing complet sur l'ensemble des emplacements, contrôle des prix, aucun trou apparent.","Facing & prix : Repositionner face-client, combler les vides, s'assurer que chaque référence est correctement étiquetée."],
-  pls_o1:["DLC frais : Tour des meubles réfrigérés, retirer tout produit périmé. Vérifier l'intégrité des emballages et les étiquettes.","Contrôle DLC : Parcourir les frais libre-service, écarter les articles arrivés à date. Contrôler l'état des conditionnements.","Tour DLC frais LS : Inspecter chaque meuble, sortir les produits périmés, vérifier la traçabilité."],
-  pls_o2:["Ruptures : Repérer chaque trou, vérifier le stock, corriger si erroné, passer 1 carton commande client pour relancer l'automatique, ajuster le SMP.","Chasse aux ruptures : Identifier les références manquantes, corriger les stocks négatifs, relancer via 1 carton commande client, revoir les SMP.","Tour des ruptures : Pour chaque emplacement vide — corriger le stock, commander 1 carton pour réamorcer l'automatique, puis vérifier le SMP."],
-  pls_o3:["SMP : Vérifier que le Stock Mini Permanent est cohérent avec la rotation journalière. Relever les valeurs à 0 ou insuffisantes.","Mise à jour SMP : S'assurer que les minima reflètent la réalité de vente. Corriger si nécessaire.","SMP à contrôler : Vérifier l'adéquation du SMP avec la vitesse d'écoulement. Revaloriser les SMP trop bas."],
-  pls_c1:["Chambre froide & réserve : Dégager les allées, évacuer les emballages vides, s'assurer que les produits sont bien identifiés.","Réserve PLS : Sortir les cartons vides, libérer les accès, vérifier l'organisation et la lisibilité des produits stockés.","Rangement réserve : Désencombrer la chambre froide, évacuer les emballages, garantir les allées libres."],
-  pls_c2:["Meubles froids : Contrôler les températures (+4°C max frais / -18°C surgel.). Nettoyer vitrines, joints et étagères. Signaler toute anomalie.","Températures & nettoyage : Vérifier les relevés de chaque meuble réfrigéré, nettoyer les surfaces en contact, noter tout écart dans le cahier.","Contrôle froid : Tour des températures, nettoyage des vitrines et joints, signalement immédiat si anomalie."],
-  pls_c3:["Linéaire frais : Redresser les articles mal positionnés, contrôler les étagères, vérifier les étiquettes de prix.","Tenue étagères : Repositionner les produits déplacés, s'assurer du bon état des rayonnages, contrôler les prix.","Tour rayonnages : Vérifier l'alignement des produits, l'état des tablettes et la conformité des affichages de prix."],
-  pft_tb:["Traçabilité & origine : Vérifier lot, date de réception et origine sur chaque produit en vitrine. Contrôler l'affichage réglementaire.","Contrôle traçabilité : Fiche complète (lot, réception, origine) pour chaque article exposé. Affichage de l'origine conforme en vitrine.","Traçabilité obligatoire : Lot, date et origine géographique documentés sur chaque produit. Vérifier l'étiquetage vitrine."],
-  pft_fl:["Origine & traçabilité : Vérifier l'affichage de l'origine sur chaque produit. Retirer tout article sans fiche conforme.","Fiches origine : Contrôler que chaque référence affiche son origine complète. Écarter les produits sans traçabilité. Vérifier la fraîcheur de l'étalage.","Contrôle origine : Étiquettes d'origine à jour et lisibles, fiches traçabilité présentes, fraîcheur visuelle de l'ensemble de l'étalage."],
-  pft_bo:["Allergènes & DLC : Vérifier que les 14 allergènes sont affichés lisiblement pour chaque produit maison. Retirer les articles périmés.","Contrôle allergènes : Affichage des allergènes complet et à jour. DLC vérifiées, produits périmés retirés sans exception.","Étiquetage allergènes : Chaque préparation maison doit avoir l'affichage des 14 allergènes réglementaires. Contrôle DLC simultané."],
-  pft_dl:["DLC & qualité : Vérifier les dates de tous les produits en vitrine et réserve. Retirer tout article périmé ou présentant un défaut d'aspect.","Tour DLC frais : Inspecter vitrine et réserve, écarter les produits arrivés à date ou abîmés, contrôler l'intégrité des conditionnements.","Contrôle qualité & DLC : Parcourir l'intégralité des produits frais, retirer les hors-date et les articles en mauvais état."],
-  pft_o2:["Ruptures : Pour chaque emplacement vide — corriger le stock, passer 1 carton commande client pour relancer l'automatique.","Chasse aux ruptures : Repérer les trous, vérifier et corriger les stocks, commander 1 carton pour réamorcer les commandes automatiques.","Tour des ruptures : Identifier les références absentes, corriger les stocks négatifs ou erronés, relancer via 1 carton commande client."],
-  pft_o3:["SMP & marge : Vérifier les SMP des ruptures traitées, corriger les valeurs insuffisantes. Contrôler les coûts d'achat des dernières réceptions.","Mise à jour SMP : S'assurer que les minima de stock correspondent à la rotation. Vérifier le prix d'achat pour veiller à la marge.","SMP & coût d'achat : Revaloriser les SMP trop bas, contrôler les tarifs des dernières livraisons pour maintenir le taux de marge."],
-  pft_c1:["Meubles froids : Relever les températures, nettoyer vitrines, joints et bacs. Consigner toute anomalie dans le cahier d'hygiène.","Contrôle froid & nettoyage : Vérifier les températures de chaque vitrine, nettoyer les surfaces, signaler immédiatement tout écart.","Températures & hygiène : Tour des relevés de froid, nettoyage complet des meubles, traçabilité dans le cahier d'hygiène."],
-  pft_c2:["Réserve & chambre froide : Évacuer déchets et emballages de découpe, dégager les allées et sorties de secours.","Rangement réserve : Sortir les emballages usagés, libérer les accès, s'assurer que les issues de secours sont dégagées.","Chambre froide : Évacuer les déchets, désencombrer les allées, vérifier les accès libres et sécurisés."],
-  pft_c3:["Plans de travail : Désinfecter plans, planches et ustensiles. Nettoyer le sol de la zone PFT. Consigner dans le cahier d'hygiène.","Nettoyage zone PFT : Désinfecter les surfaces de travail et les outils, nettoyer le sol, traçabilité dans le cahier.","Hygiène zone de production : Désinfecter après chaque usage, nettoyer le sol, renseigner le cahier d'hygiène."],
-  na_o1:["Facing & rangement : Remettre chaque article à sa place, facing face-client sur toutes les étagères, vérifier les étiquettes de prix.","Tenue du rayon : Replacer les articles selon le plan, facing complet, s'assurer que chaque référence est correctement balisée.","Rangement & facing : Remettre en ordre l'ensemble du rayon, facing soigné, contrôle des prix et du balisage."],
-  na_o2:["Ruptures : Pour chaque référence manquante — corriger le stock si erroné, commander 1 carton commande client pour relancer l'automatique, ajuster le SMP.","Chasse aux ruptures : Repérer les trous, vérifier les stocks, corriger les erreurs, passer 1 carton commande client, revoir les SMP.","Tour des ruptures : Identifier les absences, corriger le stock si besoin, relancer via 1 carton commande client, puis vérifier le SMP."],
-  na_o3:["SMP : Vérifier que le Stock Mini Permanent reflète la vitesse de vente. Corriger les valeurs à 0 ou insuffisantes.","Mise à jour SMP : S'assurer que les minima garantissent le réapprovisionnement automatique.","SMP à revoir : Contrôler et ajuster le SMP pour éviter que les ruptures se reproduisent."],
-  na_c1:["Réserve : Évacuer cartons vides et emballages, dégager les allées et sorties de secours, vérifier l'état du mobilier.","Rangement réserve : Sortir les emballages inutiles, libérer les accès, contrôler le mobilier de stockage.","Réserve : Désencombrer, évacuer les déchets, s'assurer que les issues restent libres."],
-  na_c2:["Linéaire : Contrôler l'état de chaque étagère, redresser les articles déplacés, vérifier la stabilité des tablettes.","Tour des rayonnages : Repositionner les articles tombés ou mal alignés, vérifier la solidité des étagères.","Vérification étagères : Redresser ce qui est renversé, contrôler les tablettes et signaler toute dégradation."],
-  na_c3:["Tenue visuelle : Dépoussiérer les étagères et articles exposés, soigner les têtes de gondole, allées propres et dégagées.","Propreté rayon : Dépoussiérer, soigner la mise en scène des têtes de gondole, vérifier la propreté des allées.","Présentation : Dépoussiérer l'ensemble, mettre en valeur les têtes de gondole, maintenir les allées libres et propres."]
-};
-var CO={};
-Object.keys(CV).forEach(function(k){CO[k]=CV[k][0];});
-
-function lC(k){
-  if(SHOT&&Object.prototype.hasOwnProperty.call(SHOT,k)) return SHOT[k];
-  return CV[k]?rnd(CV[k]):(CO[k]||'');
-}
-function fmtC(s){
-  var i=s.indexOf(':');
-  if(i>0&&i<80) return '<strong>'+s.substring(0,i)+' :</strong>'+s.substring(i+1);
-  return s;
-}
-function getCons(k){
-  var t=META[k]?META[k].t:'na', op=[],cl=[];
-  if(t==='pgc'){op=[lC('pgc_o1'),lC('pgc_o2'),lC('pgc_o3')];cl=[lC('pgc_c1'),lC('pgc_c2'),lC('pgc_c3')];}
-  else if(t==='pls'){op=[lC('pls_o1'),lC('pls_o2'),lC('pls_o3')];cl=[lC('pls_c1'),lC('pls_c2'),lC('pls_c3')];}
-  else if(t==='pft'){
-    var c1=(k==='20'||k==='21'||k==='24')?lC('pft_tb'):k==='22'?lC('pft_fl'):k==='23'?lC('pft_bo'):lC('pft_dl');
-    op=[c1,lC('pft_o2'),lC('pft_o3')];cl=[lC('pft_c1'),lC('pft_c2'),lC('pft_c3')];
-  } else {op=[lC('na_o1'),lC('na_o2'),lC('na_o3')];cl=[lC('na_c1'),lC('na_c2'),lC('na_c3')];}
-  return{op:op.filter(function(x){return x!=='';}),cl:cl.filter(function(x){return x!=='';})};
-}
-
-// ── Classement National ────────────────────────────
-function buildNational(d,m){
-  if(!d.rang) return '';
-  var er=d.er||0;
-  var erTxt=er>0?'<span style="color:var(--green)">&#9650; +'+er+' place'+(Math.abs(er)>1?'s':'')+'</span>':
-            er<0?'<span style="color:var(--red)">&#9660; '+er+' place'+(Math.abs(er)>1?'s':'')+'</span>':
-            '<span style="color:var(--muted)">Stable</span>';
-  var medal=d.rang<=3?'&#127942;':d.rang<=10?'&#127885;':d.rang<=20?'&#128077;':'&#128202;';
-  var badge='rbg'+(d.rang<=3?' top':'');
-  return '<div class="card full" style="margin-top:0">'+
-    '<div class="ch rg">'+medal+' Classement National &mdash; Rayon '+m.n+' '+m.nom+'</div>'+
-    '<div style="display:flex;flex-wrap:wrap;gap:16px;align-items:center;padding:12px 16px">'+
-      '<div style="text-align:center;min-width:80px">'+
-        '<span class="'+badge+'" style="font-size:22px;padding:6px 12px">'+d.rang+'</span>'+
-        '<div style="font-size:11px;color:var(--muted);margin-top:5px">Rang National</div>'+
-      '</div>'+
-      '<div style="border-left:1px solid var(--border);height:40px"></div>'+
-      '<div style="flex:1;min-width:140px">'+
-        '<div style="font-size:13px;font-weight:600">&#201;volution rang</div>'+
-        '<div style="font-size:14px;margin-top:3px">'+erTxt+'</div>'+
-      '</div>'+
-      '<div style="border-left:1px solid var(--border);height:40px"></div>'+
-      '<div style="flex:1;min-width:140px">'+
-        '<div style="font-size:13px;font-weight:600">CA Jour</div>'+
-        '<div style="font-size:14px;margin-top:3px"><strong>'+d.ca.toFixed(1)+' K&#8364;</strong> <span style="color:'+(d.ev>=0?'var(--green)':'var(--red)')+'">'+
-        (d.ev>=0?'+':'')+d.ev.toFixed(1)+'%</span></div>'+
-      '</div>'+
-      '<div style="border-left:1px solid var(--border);height:40px"></div>'+
-      '<div style="flex:1;min-width:140px">'+
-        '<div style="font-size:13px;font-weight:600">&#201;cart Budget</div>'+
-        '<div style="font-size:14px;margin-top:3px"><span style="color:'+(d.bud>=0?'var(--green)':'var(--red)')+'">'+
-        (d.bud>=0?'+':'')+d.bud.toFixed(1)+' K&#8364;</span></div>'+
-      '</div>'+
-    '</div>'+
-  '</div>';
-}
-
-// ── Méthode sandwich ───────────────────────────────
-var MSG_POS=[
-  {t:"Bonne journée à toute l'équipe !",s:"Un rayon bien tenu, c'est la première impression que le client retient. Merci pour votre implication."},
-  {t:"Merci pour votre engagement !",s:"Chaque geste quotidien construit la satisfaction client. L'équipe fait la différence."},
-  {t:"En route pour une belle journée !",s:"La rigueur d'aujourd'hui prépare les résultats de demain. Comptez sur vous."},
-  {t:"L'équipe fait la force du rayon !",s:"Un bon brief, c'est une journée qui se déroule sans accroc. Bonne continuation à tous."},
-  {t:"Chaque détail compte !",s:"Un produit bien placé, un client satisfait. Votre travail a un impact direct sur le résultat du magasin."},
-  {t:"Cap sur une journée productive !",s:"Les indicateurs guident, votre terrain fait la différence. Bonne journée à toutes et tous."}
-];
-var MSG_NEG=[
-  {t:"Point d'amélioration :",s:"Les stocks négatifs sont à corriger en priorité pour fiabiliser les commandes automatiques."},
-  {t:"Point d'amélioration :",s:"Les ruptures catalogue pénalisent le CA — chasse aux trous et commande 1 carton pour chaque référence manquante."},
-  {t:"Point d'amélioration :",s:"Le chiffre d'affaires est en recul — renforcer le facing et la disponibilité produit pour limiter la perte."},
-  {t:"Point d'amélioration :",s:"La marge est sous pression — contrôler les prix d'achat et limiter les démarques non justifiées."},
-  {t:"Point d'amélioration :",s:"L'écart au budget persiste — chaque vente compte pour rattraper le retard."}
-];
-function buildClosing(d){
-  var pos=rnd(MSG_POS), neg=null;
-  if(d.stk>20) neg=MSG_NEG[0];
-  else if(d.rupt>50) neg=MSG_NEG[1];
-  else if(d.ev<-10) neg=MSG_NEG[2];
-  else if(d.dm<-2) neg=MSG_NEG[3];
-  else if(d.bud<-3) neg=MSG_NEG[4];
-  if(!neg) return '<div class="closing"><div class="cl-ico">🌟</div><div><div class="cl-t">'+pos.t+'</div><div class="cl-s">'+pos.s+'</div></div></div>';
-  var others=MSG_POS.filter(function(p){return p.t!==pos.t;});
-  var pos2=others.length?rnd(others):pos; // garde-fou si MSG_POS réduit à 1 élément
-  return '<div class="closing"><div class="cl-ico">💪</div><div><div class="cl-t">'+pos.t+'</div><div class="cl-s">'+pos.s+'</div></div></div>'+
-    '<div class="card full" style="margin-bottom:12px;border-left:4px solid var(--orange)"><div class="ch al">⚡ '+neg.t+'</div><div style="padding:10px 14px;font-size:13px">'+neg.s+'</div></div>'+
-    '<div class="closing"><div class="cl-ico">🎯</div><div><div class="cl-t">'+pos2.t+'</div><div class="cl-s">'+pos2.s+'</div></div></div>';
-}
-
-function onSel(){
-  var k=document.getElementById('sel').value;
-  rayonK=k||null;
-  document.getElementById('btn-edt').disabled=!k;
-  var rs=document.getElementById('reg-s');
-  if(rs) rs.style.display='none';
-  majBtnReg();
-}
-function sg(v){return v>=0?'up':'dn';}
-
-// ── Agrégation données catégories ─────────────────
-// Additionne les données de plusieurs rayons pour ALI et NALI
-var AGG_KEYS={
-  "ALI":["1","2"],          // PGC + PFT
-  "NALI":["3","4","6"]      // Bazar + EPCS + Textile
-};
-function getAggData(k){
-  var keys=AGG_KEYS[k]; if(!keys) return D[k]||{};
-  var totalCA=0, totalBud=0, totalStk=0, totalRupt=0;
-  var sumTauxW=0, sumDmW=0, sumEvW=0, totalW=0;
-  keys.forEach(function(rk){
-    var d=D[rk]||{}; if(!d.ca) return;
-    totalCA+=d.ca; totalBud+=d.bud;
-    totalStk+=d.stk; totalRupt+=d.rupt;
-    sumEvW+=d.ev*d.ca; sumTauxW+=d.taux*d.ca; sumDmW+=d.dm*d.ca;
-    totalW+=d.ca;
-  });
-  return{
-    ca:totalCA, bud:totalBud, stk:totalStk, rupt:totalRupt,
-    ev:totalW?sumEvW/totalW:0,
-    taux:totalW?sumTauxW/totalW:0,
-    dm:totalW?sumDmW/totalW:0,
-    rang:0, er:0
-  };
-}
-
-// ── Génération du brief ────────────────────────────
-function genBrief(){
-  var k=document.getElementById('sel').value;
-  if(!k){alert('Veuillez choisir un rayon.');return;}
-  rayonK=k;
-  var m=META[k], d=(k==='ALI'||k==='NALI')?getAggData(k):(D[k]||{});
-  var c=getCons(k);
-  SHOT=null; majBtnEdit();
-  var al=[];
-  if(d.stk>20)      al.push({t:'bad',l:'⚠ '+d.stk+' stocks négatifs'});
-  else if(d.stk>0)  al.push({t:'warn',l:d.stk+' stocks négatifs'});
-  if(d.rupt>50)     al.push({t:'bad',l:'⚠ '+d.rupt+' ruptures catalogue'});
-  else if(d.rupt>0) al.push({t:'warn',l:d.rupt+' ruptures catalogue'});
-  if(d.ev<-15) al.push({t:'bad',l:'CA en forte baisse ('+(d.ev>=0?'+':'')+d.ev.toFixed(1)+'%)'});
-  if(d.dm<-3)  al.push({t:'bad',l:'Marge en recul ('+(d.dm>=0?'+':'')+d.dm.toFixed(2)+' pts)'});
-  if(d.dm>2)   al.push({t:'good',l:'✓ Marge en progression (+'+d.dm.toFixed(2)+' pts)'});
-  if(d.er>10)  al.push({t:'good',l:'✓ Progression nationale (+'+d.er+' places)'});
-  if(d.bud<-2) al.push({t:'warn',l:'Écart budget '+d.bud.toFixed(1)+' K€'});
-  if(!al.length) al.push({t:'good',l:'✓ Situation globale correcte'});
-
-  function opR(t,n){return '<div class="ci"><div class="cn">'+n+'</div><div class="ct">'+fmtC(t)+'</div></div>';}
-  function clR(t,n){return '<div class="ci cl"><div class="cn">'+n+'</div><div class="ct">'+fmtC(t)+'</div></div>';}
-  function mR(t,isCl){return '<div class="ci man'+(isCl?' cl':'')+'"><div class="cn">+</div><div class="ct">'+esc(t)+'<span class="mbadge">MANUEL</span></div></div>';}
-
-  var opH=c.op.map(function(t,i){return opR(t,i+1);}).join('');
-  if(mOp1) opH+=mR(mOp1,false);
-  if(mOp2) opH+=mR(mOp2,false);
-  var clH=c.cl.map(function(t,i){return clR(t,i+1);}).join('');
-  if(mCl) clH+=mR(mCl,true);
-
-  var erl=(d.er>0?'+':'')+d.er+' place'+(Math.abs(d.er)>1?'s':'');
-  var rangTxt=d.rang?'Rang '+d.rang:'—';
-
-  var h=
-    '<div class="b-hdr">'+
-      '<div>'+
-        '<div style="font-size:11px;opacity:.65">'+(k==='ALI'?'PGC + PFT':k==='NALI'?'Bazar + EPCS + Textile':'Rayon '+m.n+' · '+m.par)+' · HF7152 — Narbonne</div>'+
-        '<div class="b-title">'+m.nom+'</div>'+
-        '<div class="b-meta">'+(DATE_STR||'—')+' — Source Darwin</div>'+
-      '</div>'+
-      '<div class="kpis">'+
-        '<div class="kpi"><div class="kv '+sg(d.ev)+'">'+d.ca.toFixed(1)+' K€</div><div class="kl">CA Jour</div></div>'+
-        '<div class="kpi"><div class="kv '+sg(d.ev)+'">'+(d.ev>=0?'+':'')+d.ev.toFixed(1)+'%</div><div class="kl">Évol N-1</div></div>'+
-        '<div class="kpi"><div class="kv up">'+(d.taux?d.taux.toFixed(2)+'%':'—')+'</div><div class="kl">Taux Marge</div></div>'+
-        '<div class="kpi"><div class="kv '+sg(d.dm)+'">'+(d.dm>=0?'+':'')+d.dm.toFixed(2)+' pts</div><div class="kl">Diff Marge N-1</div></div>'+
-        '<div class="kpi"><div class="kv '+sg(d.bud)+'">'+(d.bud>=0?'+':'')+d.bud.toFixed(1)+' K€</div><div class="kl">Écart Budget</div></div>'+
-        '<div class="kpi"><div class="kv '+(d.er>0?'up':d.er<0?'dn':'nt')+'">'+rangTxt+'</div><div class="kl">National ('+erl+')</div></div>'+
-      '</div>'+
-    '</div>'+
-    '<div class="card full" style="margin-bottom:12px">'+
-      '<div class="ch al">⚡ Points d\'attention du jour</div>'+
-      '<div class="alerts">'+al.map(function(a){return '<span class="chip '+a.t+'">'+a.l+'</span>';}).join('')+'</div>'+
-    '</div>'+
-    '<div class="g2">'+
-      '<div class="card"><div class="ch op">⚙️ Consignes Opérationnelles</div><div class="clist">'+opH+'</div></div>'+
-      '<div class="card"><div class="ch cl">🧹 Propreté & Tenue du Rayon</div><div class="clist">'+clH+'</div></div>'+
-      buildNational(d,m)+
-    '</div>'+
-    '<div id="reg-s" style="display:none"></div>'+
-    buildClosing(d)+
-    '<div class="bfoot">Brief généré — HF7152 Narbonne — '+(DATE_STR||new Date().toLocaleDateString('fr-FR'))+' — Confidentiel Carrefour</div>';
-
-  document.getElementById('brief-c').innerHTML=h;
-  document.getElementById('brief').style.display='block';
-  document.getElementById('brief').scrollIntoView({behavior:'smooth',block:'start'});
-  majBtnReg();
-}
-
-// ── Classement Région ──────────────────────────────
-function affReg(){
-  var k=rayonK; if(!k||!REG[k]) return;
-  var reg=REG[k],mm=META[k];
-  var rows=reg.mags.map(function(mg){
-    var tc=mg.isMe?' me':'';
-    var bc='rbg'+(mg.rang<=3?' top':'')+(mg.isMe?' me':'');
-    var ec=mg.ev>=0?'var(--green)':'var(--red)';
-    return '<tr class="'+tc+'"><td><span class="'+bc+'">'+mg.rang+'</span></td>'+
-      '<td>'+(mg.isMe?'<strong>'+mg.nom+' ← Vous</strong>':mg.nom)+'</td>'+
-      '<td>'+mg.ca.toFixed(1)+' K€</td>'+
-      '<td style="color:'+ec+'">'+(mg.ev>=0?'+':'')+mg.ev.toFixed(1)+'%</td>'+
-      '<td>'+mg.deb.toLocaleString('fr-FR')+'</td>'+
-      '<td>'+mg.pan.toFixed(1)+' €</td></tr>';
-  }).join('');
-  var h='<div class="card full" style="margin-bottom:12px">'+
-    '<div class="ch rg">🌍 Classement Régional DTF SUD EST — Rayon '+mm.n+' '+mm.nom+'</div>'+
-    '<div style="padding:8px 12px 4px;font-size:12px;color:var(--muted)">DTF : <strong>'+reg.dtf.ca.toFixed(1)+' K€</strong> ('+(reg.dtf.ev>=0?'+':'')+reg.dtf.ev.toFixed(1)+'% vs N-1) · Débits : <strong>'+reg.dtf.deb.toLocaleString('fr-FR')+'</strong> · Panier : <strong>'+reg.dtf.pan.toFixed(1)+' €</strong></div>'+
-    '<div style="overflow-x:auto;padding:0 8px 12px"><table class="rtbl"><thead><tr><th>Rang</th><th>Magasin</th><th>CA</th><th>Évol</th><th>Débits</th><th>Panier</th></tr></thead><tbody>'+rows+'</tbody></table></div></div>';
-  var s=document.getElementById('reg-s');
-  s.innerHTML=h; s.style.display='block';
-  s.scrollIntoView({behavior:'smooth'});
-}
-
-// ── Consignes manuelles ────────────────────────────
-function ouvMan(){document.getElementById('m1').value=mOp1;document.getElementById('m2').value=mOp2;document.getElementById('m3').value=mCl;document.getElementById('ov-man').classList.add('open');}
-function savMan(){mOp1=document.getElementById('m1').value.trim();mOp2=document.getElementById('m2').value.trim();mCl=document.getElementById('m3').value.trim();majBtnMan();fov('ov-man');}
-function effMan(){['m1','m2','m3'].forEach(function(i){document.getElementById(i).value='';});mOp1=mOp2=mCl='';majBtnMan();fov('ov-man');}
-function majBtnMan(){var b=document.getElementById('btn-man');var has=mOp1||mOp2||mCl;b.classList.toggle('on',!!has);b.textContent=has?'✏️ Consignes manuelles ●':'✏️ Consignes manuelles';}
-
-// ── Modifier consignes one-shot ────────────────────
-var GRP={
-  pgc:[{lb:'🛒 PGC — Opérationnel',co:'#003d8f',ks:['pgc_o1','pgc_o2','pgc_o3'],ns:['Consigne 1','Consigne 2','Consigne 3']},{lb:'🛒 PGC — Propreté',co:'#16a34a',ks:['pgc_c1','pgc_c2','pgc_c3'],ns:['Propreté 1','Propreté 2','Propreté 3']}],
-  pls:[{lb:'❄️ PLS — Opérationnel',co:'#003d8f',ks:['pls_o1','pls_o2','pls_o3'],ns:['Consigne 1','Consigne 2','Consigne 3']},{lb:'❄️ PLS — Propreté',co:'#16a34a',ks:['pls_c1','pls_c2','pls_c3'],ns:['Propreté 1','Propreté 2','Propreté 3']}],
-  pft_tb:[{lb:'🥩 PFT Opérationnel',co:'#003d8f',ks:['pft_tb','pft_o2','pft_o3'],ns:['Traçabilité','Consigne 2','Consigne 3']},{lb:'🥩 PFT — Propreté',co:'#16a34a',ks:['pft_c1','pft_c2','pft_c3'],ns:['Propreté 1','Propreté 2','Propreté 3']}],
-  pft_fl:[{lb:'🥬 PFT Opérationnel (F&L)',co:'#003d8f',ks:['pft_fl','pft_o2','pft_o3'],ns:['Origine','Consigne 2','Consigne 3']},{lb:'🥬 PFT — Propreté',co:'#16a34a',ks:['pft_c1','pft_c2','pft_c3'],ns:['Propreté 1','Propreté 2','Propreté 3']}],
-  pft_bo:[{lb:'🥐 PFT Opérationnel (Boulangerie)',co:'#003d8f',ks:['pft_bo','pft_o2','pft_o3'],ns:['Allergènes','Consigne 2','Consigne 3']},{lb:'🥐 PFT — Propreté',co:'#16a34a',ks:['pft_c1','pft_c2','pft_c3'],ns:['Propreté 1','Propreté 2','Propreté 3']}],
-  pft_dl:[{lb:'🐟 PFT Opérationnel',co:'#003d8f',ks:['pft_dl','pft_o2','pft_o3'],ns:['DLC','Consigne 2','Consigne 3']},{lb:'🐟 PFT — Propreté',co:'#16a34a',ks:['pft_c1','pft_c2','pft_c3'],ns:['Propreté 1','Propreté 2','Propreté 3']}],
-  na:[{lb:'📦 Non Alim — Opérationnel',co:'#003d8f',ks:['na_o1','na_o2','na_o3'],ns:['Consigne 1','Consigne 2','Consigne 3']},{lb:'📦 Non Alim — Propreté',co:'#16a34a',ks:['na_c1','na_c2','na_c3'],ns:['Propreté 1','Propreté 2','Propreté 3']}]
-};
-function getGrp(k){var t=META[k]?META[k].t:'na';if(t==='pgc')return GRP.pgc;if(t==='pls')return GRP.pls;if(t==='pft'){if(k==='20'||k==='21'||k==='24')return GRP.pft_tb;if(k==='22')return GRP.pft_fl;if(k==='23')return GRP.pft_bo;return GRP.pft_dl;}return GRP.na;}
-
-function ouvEdit(){
-  var k=document.getElementById('sel').value; if(!k) return;
-  var mm=META[k],grps=getGrp(k);
-  var h='<div style="background:#eff6ff;border-radius:7px;padding:9px 13px;margin-bottom:12px;font-size:13px;color:#1e40af">📌 Rayon <strong>'+mm.n+' — '+mm.nom+'</strong>. Laisser vide = <strong>supprimer</strong> cette consigne du brief (one-shot).</div>';
-  grps.forEach(function(g){
-    h+='<div class="eg"><div class="egh" style="background:'+g.co+'18;color:'+g.co+'">'+g.lb+'</div><div class="egb">';
-    g.ks.forEach(function(key,i){
-      var hasSHOT=SHOT&&Object.prototype.hasOwnProperty.call(SHOT,key);
-      var val=hasSHOT?SHOT[key]:(CO[key]||'');
-      var lbl=val===''?'SUPPRIMÉ':'MODIFIÉ';
-      h+='<div><div class="flbl">'+g.ns[i]+(hasSHOT?'<span class="modb">'+lbl+'</span>':'')+'</div>'+
-         '<textarea data-k="'+key+'" rows="3" style="border-color:'+(hasSHOT?'#3b82f6':'var(--border)')+'">'+esc(val)+'</textarea></div>';
+var statsObserved=false;
+var statsIO=new IntersectionObserver(function(entries){
+  if(statsObserved) return;
+  if(entries[0].isIntersecting){
+    statsObserved=true;
+    var vals=document.querySelectorAll('.stat-val');
+    var targets=[38,3,14,0];
+    vals.forEach(function(el,i){
+      animateVal(el,targets[i],0,'');
     });
-    h+='</div></div>';
-  });
-  document.getElementById('edit-c').innerHTML=h;
-  document.getElementById('ov-edt').classList.add('open');
-}
-
-function appEdit(){
-  var tas=document.querySelectorAll('#edit-c textarea'),shot={},has=false;
-  tas.forEach(function(ta){
-    var k=ta.getAttribute('data-k'),v=ta.value.trim();
-    if(v!==(CO[k]||'')){ shot[k]=v; has=true; }
-  });
-  SHOT=has?shot:null;
-  majBtnEdit(); fov('ov-edt');
-}
-function majBtnEdit(){
-  var b=document.getElementById('btn-edt'); if(!b) return;
-  b.disabled=!document.getElementById('sel').value;
-  var has=SHOT&&Object.keys(SHOT).length>0;
-  b.classList.toggle('on',has);
-  b.textContent=has?'⚙️ Consignes à appliquer ●':'⚙️ Modifier consignes';
-}
-
-// ── Impression ─────────────────────────────────────
-function imprimer(){
-  var c=document.getElementById('brief-c');
-  if(!c||!c.innerHTML.trim()){alert("Générez d'abord un brief.");return;}
-  var st=''; document.querySelectorAll('style').forEach(function(s){st+=s.innerHTML;});
-  var w=window.open('','_blank');
-  if(!w){alert("Autorisez les pop-ups pour ce fichier.");return;}
-  w.document.write(
-    '<!DOCTYPE html><html lang="fr"><head><meta charset="UTF-8"><title>Brief</title><style>'+st+
-    'body{background:#fff;padding:10px}.ctrl,.ov{display:none!important}'+
-    '.b-hdr,.closing{-webkit-print-color-adjust:exact;print-color-adjust:exact}'+
-    '</style></head><body><div style="max-width:960px;margin:0 auto">'+c.innerHTML+'</div>'+
-    '<'+'script>window.onload=function(){window.print();window.onafterprint=function(){window.close();};}<'+'/script></body></html>'
-  );
-  w.document.close();
-}
-
-function esc(s){return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
-function fov(id){document.getElementById(id).classList.remove('open');}
-document.querySelectorAll('.ov').forEach(function(ov){
-  ov.addEventListener('click',function(e){if(e.target===ov)ov.classList.remove('open');});
-});
+    vals[0].textContent='38+'; // override car non-animable proprement
+  }
+},{threshold:.5});
+var statsRow=document.querySelector('.stats-row');
+if(statsRow) statsIO.observe(statsRow);
 </script>
 </body>
 </html>
