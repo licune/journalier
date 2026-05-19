@@ -352,6 +352,9 @@ function parserRayons(txt){
     var ns=getNums(ligne);
     if(ns.length<6) return;
 
+    // DEBUG : afficher les données extraites
+    console.log('[Classement] R'+num+' '+NOM_PG[num]+' - ns:',ns.slice(0,12));
+
     // Point de départ adaptatif pour chercher le rang
     var start = (ns.length>4 && ns[4]>0) ? 6 : 4;
 
