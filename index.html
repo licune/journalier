@@ -223,9 +223,9 @@ var NOM_PG = {
   "19":"PARAPHARMACIE","20":"CHARCUT","21":"POISSONNERIE","22":"FRUITS",
   "23":"BOULANGERIE","24":"BOUCHERIE","25":"P.L.S","30":"BRICOLAGE",
   "31":"CONFORT","32":"PAPETERIE","33":"JOUET","34":"JARDIN",
-  "35":"AUTO","8X":"CULTURE","40":"GEM","41":"PEM",
+  "35":"AUTO","8X":"CULTURE","40":"GEM","41":"PEM","42":"PHOTO",
   "43":"IMAGE","44":"MICRO","45":"RADIO","60":"CHAUSSURE","61":"BEBE",
-  "62":"ENFANT","63":"FEMME","64":"HOMME","65":"LINGE","66":"ACCESS"
+  "62":"ENFANT","63":"FEMME","64":"HOMME","65":"LINGE","66":"ACCESS","67":"BIJOUTERIE"
 };
 
 // ═══════════════════════════════════════════════════
@@ -314,7 +314,7 @@ function parserPerf(txt){
 
   txt.split('\n').forEach(function(ligne){
     ligne=ligne.trim(); if(!ligne) return;
-    var numM=ligne.match(/^(10|11|12|14|19|20|21|22|23|24|25|30|31|32|33|34|35|40|41|43|44|45|60|61|62|63|64|65|66|8X)\s/i);
+    var numM=ligne.match(/^(10|11|12|14|19|20|21|22|23|24|25|30|31|32|33|34|35|40|41|42|43|44|45|60|61|62|63|64|65|66|67|8X)\s/i);
     if(!numM) return;
     var num=numM[1].toUpperCase();
     if(!D[num]||!NOM_PG[num]) return;
@@ -348,7 +348,7 @@ function parserRayons(txt){
     
     // Regex modifié : accepte du texte optionnel avant le numéro de rayon
     // Pattern : (texte optionnel) (numéro rayon) (espace) (nom rayon)
-    var numM=ligne.match(/(?:^|\s)(10|11|12|14|19|20|21|22|23|24|25|30|31|32|33|34|35|40|41|43|44|45|60|61|62|63|64|65|66|8X)\s/i);
+    var numM=ligne.match(/(?:^|\s)(10|11|12|14|19|20|21|22|23|24|25|30|31|32|33|34|35|40|41|42|43|44|45|60|61|62|63|64|65|66|67|8X)\s/i);
     if(!numM) return;
     var num=numM[1].toUpperCase();
     ligne=ligne.trim();
@@ -405,6 +405,7 @@ var MAP_COMPAR=[
   // EPCS
   [/G\.?E\.?M\.?|GROS\s*ELECTRO/i,"40"],
   [/P\.?E\.?M\.?|PETIT\s*ELECTRO/i,"41"],
+  [/PHOTO|COMMUNICATION/i,"42"],
   [/IMAGE\s*(ET)?\s*SON/i,"43"],
   [/MICRO\s*INFORMATIQUE|INFORMATIQUE/i,"44"],
   [/RADIOTELEPHONIE|TELEPHONIE|RADIO/i,"45"],
@@ -415,7 +416,8 @@ var MAP_COMPAR=[
   [/FEMMES?/i,"63"],
   [/HOMMES?/i,"64"],
   [/LINGE\s+DE\s+MAISON|LINGE/i,"65"],
-  [/ACCESSOIRES?/i,"66"]
+  [/ACCESSOIRES?/i,"66"],
+  [/BIJOUTERIE/i,"67"]
 ];
 
 var EXCL_C=['DTF','CLASSEMENT','CHIFFRE','MAGASIN','PERIODE','SOURCE','DARWIN',
