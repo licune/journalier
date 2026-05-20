@@ -349,6 +349,17 @@ function parserRayons(txt){
     var num=numM[1].toUpperCase();
     ligne=ligne.trim(); // Trim APRÈS le match
     if(!D[num]||!NOM_PG[num]) return;
+    
+    // DEBUG : vérifier si le nom est présent
+    var nomAttendu = NOM_PG[num];
+    var nomPresent = ligne.toUpperCase().indexOf(nomAttendu) !== -1;
+    if(!nomPresent) {
+      console.warn('[Classement] R'+num+' REJETÉ - nom attendu "'+nomAttendu+'" non trouvé dans:',ligne.substring(0,80));
+      return;
+    }
+    console.log('[Classement] R'+num+' ✓ accepté');
+    
+    // Si on arrive ici, le nom est OK
     if(ligne.toUpperCase().indexOf(NOM_PG[num])===-1) return;
 
     var ns=getNums(ligne);
