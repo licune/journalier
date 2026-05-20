@@ -343,6 +343,12 @@ function parserPerf(txt){
 function parserRayons(txt){
   txt.split('\n').forEach(function(ligne){
     if(!ligne) return;
+    
+    // DEBUG : logger les lignes contenant les numéros manquants
+    if(/\b(11|14|20|23|25)\b/.test(ligne)) {
+      console.log('[DEBUG] Ligne avec numéro manquant:',ligne.substring(0,100));
+    }
+    
     // Regex accepte espaces d'indentation avant le numéro
     var numM=ligne.match(/^\s*(10|11|12|14|19|20|21|22|23|24|25|30|31|32|33|34|35|40|41|43|44|45|60|61|62|63|64|65|66|8X)\s/i);
     if(!numM) return;
