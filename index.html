@@ -129,8 +129,8 @@ textarea:focus{outline:none;border-color:var(--lblue)}
           <optgroup label="PGC"><option value="10">10 — Boissons</option><option value="11">11 — Droguerie</option><option value="12">12 — Parfumerie Hygiène</option><option value="14">14 — Épicerie</option><option value="19">19 — Parapharmacie</option></optgroup>
           <optgroup label="PFT"><option value="20">20 — Charcuterie / Traiteur</option><option value="21">21 — Poissonnerie</option><option value="22">22 — Fruits et Légumes</option><option value="23">23 — Boulangerie / Pâtisserie</option><option value="24">24 — Boucherie Volaille</option><option value="25">25 — PLS (Libre Service)</option></optgroup>
           <optgroup label="Bazar"><option value="30">30 — Bricolage</option><option value="31">31 — Confort de la Maison</option><option value="32">32 — Papeterie</option><option value="33">33 — Jouet Sport</option><option value="34">34 — Jardin et Animalerie</option><option value="35">35 — Auto</option><option value="8X">8X — Culture</option></optgroup>
-          <optgroup label="EPCS"><option value="40">40 — GEM</option><option value="41">41 — PEM</option><option value="43">43 — Image et Son</option><option value="44">44 — Micro Informatique</option><option value="45">45 — Radiotéléphonie</option></optgroup>
-          <optgroup label="Textile"><option value="60">60 — Chaussure</option><option value="61">61 — Bébé</option><option value="62">62 — Enfant</option><option value="63">63 — Femme</option><option value="64">64 — Homme</option><option value="65">65 — Linge de Maison</option><option value="66">66 — Accessoires</option></optgroup>
+          <optgroup label="EPCS"><option value="40">40 — GEM</option><option value="41">41 — PEM</option><option value="42">42 — Photo Communication</option><option value="43">43 — Image et Son</option><option value="44">44 — Micro Informatique</option><option value="45">45 — Radiotéléphonie</option></optgroup>
+          <optgroup label="Textile"><option value="60">60 — Chaussure</option><option value="61">61 — Bébé</option><option value="62">62 — Enfant</option><option value="63">63 — Femme</option><option value="64">64 — Homme</option><option value="65">65 — Linge de Maison</option><option value="66">66 — Accessoires</option><option value="67">67 — Bijouterie</option></optgroup>
         </select>
       </div>
       <button class="btn btn-blue" onclick="genBrief()">▶ Générer</button>
@@ -204,6 +204,7 @@ var META = {
   "8X":{n:"8X",nom:"Culture",par:"Bazar",t:"na"},
   "40":{n:"40",nom:"GEM",par:"EPCS",t:"na"},
   "41":{n:"41",nom:"PEM",par:"EPCS",t:"na"},
+  "42":{n:"42",nom:"Photo Communication",par:"EPCS",t:"na"},
   "43":{n:"43",nom:"Image et Son",par:"EPCS",t:"na"},
   "44":{n:"44",nom:"Micro Informatique",par:"EPCS",t:"na"},
   "45":{n:"45",nom:"Radiotéléphonie",par:"EPCS",t:"na"},
@@ -213,7 +214,8 @@ var META = {
   "63":{n:"63",nom:"Femme",par:"Textile",t:"na"},
   "64":{n:"64",nom:"Homme",par:"Textile",t:"na"},
   "65":{n:"65",nom:"Linge de Maison",par:"Textile",t:"na"},
-  "66":{n:"66",nom:"Accessoires",par:"Textile",t:"na"}
+  "66":{n:"66",nom:"Accessoires",par:"Textile",t:"na"},
+  "67":{n:"67",nom:"Bijouterie",par:"Textile",t:"na"}
 };
 
 var NOM_PG = {
