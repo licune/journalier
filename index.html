@@ -344,35 +344,17 @@ function parserRayons(txt){
   txt.split('\n').forEach(function(ligne){
     if(!ligne) return;
     
-    // DEBUG : logger les lignes contenant les numéros manquants
-    if(/\b(11|14|20|23|25)\b/.test(ligne)) {
-      console.log('[DEBUG] Ligne avec numéro manquant:',ligne.substring(0,100));
-    }
-    
-    // Regex accepte espaces d'indentation avant le numéro
-    var numM=ligne.match(/^\s*(10|11|12|14|19|20|21|22|23|24|25|30|31|32|33|34|35|40|41|43|44|45|60|61|62|63|64|65|66|8X)\s/i);
+    // Regex modifié : accepte du texte optionnel avant le numéro de rayon
+    // Pattern : (texte optionnel) (numéro rayon) (espace) (nom rayon)
+    var numM=ligne.match(/(?:^|\s)(10|11|12|14|19|20|21|22|23|24|25|30|31|32|33|34|35|40|41|43|44|45|60|61|62|63|64|65|66|8X)\s/i);
     if(!numM) return;
     var num=numM[1].toUpperCase();
-    ligne=ligne.trim(); // Trim APRÈS le match
+    ligne=ligne.trim();
     if(!D[num]||!NOM_PG[num]) return;
-    
-    // DEBUG : vérifier si le nom est présent
-    var nomAttendu = NOM_PG[num];
-    var nomPresent = ligne.toUpperCase().indexOf(nomAttendu) !== -1;
-    if(!nomPresent) {
-      console.warn('[Classement] R'+num+' REJETÉ - nom attendu "'+nomAttendu+'" non trouvé dans:',ligne.substring(0,80));
-      return;
-    }
-    console.log('[Classement] R'+num+' ✓ accepté');
-    
-    // Si on arrive ici, le nom est OK
     if(ligne.toUpperCase().indexOf(NOM_PG[num])===-1) return;
 
     var ns=getNums(ligne);
     if(ns.length<6) return;
-
-    // DEBUG : afficher les données extraites
-    console.log('[Classement] R'+num+' '+NOM_PG[num]+' - ns:',ns.slice(0,12));
 
     // Point de départ adaptatif pour chercher le rang
     var start = (ns.length>4 && ns[4]>0) ? 6 : 4;
