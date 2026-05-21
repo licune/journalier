@@ -369,7 +369,17 @@ function parserRayons(txt){
     }
 
     // Point de départ adaptatif pour chercher le rang
-    var start = (ns.length>4 && ns[4]>0) ? 6 : 4;
+    // Si ns[4] est un entier dans [1,300], c'est probablement déjà le RANG (structure simplifiée)
+    // Sinon, c'est probablement CA_ECOM et le rang est plus loin
+    var start = 4;
+    if(ns.length > 4) {
+      var v4 = ns[4];
+      var estRang = (v4 === Math.round(v4) && v4 >= 1 && v4 <= 300);
+      if(!estRang && v4 > 0) {
+        // ns[4] > 0 mais pas dans plage rang → probablement CA_ECOM
+        start = 6;
+      }
+    }
 
     var rang=0, er=0;
     for(var i=start; i<ns.length-1; i++){
