@@ -355,8 +355,18 @@ function parserRayons(txt){
     if(!D[num]||!NOM_PG[num]) return;
     if(ligne.toUpperCase().indexOf(NOM_PG[num])===-1) return;
 
+    // Debug spécifique rayon 67
+    if(num === '67') {
+      console.log('[DEBUG R67] Ligne détectée:',ligne);
+    }
+
     var ns=getNums(ligne);
     if(ns.length<6) return;
+
+    // Debug R67 : voir les nombres extraits
+    if(num === '67') {
+      console.log('[DEBUG R67] Nombres extraits ns:',ns);
+    }
 
     // Point de départ adaptatif pour chercher le rang
     var start = (ns.length>4 && ns[4]>0) ? 6 : 4;
@@ -373,6 +383,11 @@ function parserRayons(txt){
     var d=D[num];
     if(rang>=1&&rang<=300) d.rang=rang;
     if(er>=-300&&er<=300) d.er=er;
+    
+    // Debug R67 : afficher le rang trouvé
+    if(num === '67') {
+      console.log('[DEBUG R67] Rang trouvé:',rang,'ER:',er,'start:',start);
+    }
   });
 }
 
