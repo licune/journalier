@@ -485,11 +485,19 @@ function parserCompar(txt){
   REG[rayonDetecte]={dtf:{ca:0,ev:0,deb:0,pan:0},mags:[]};
   var reg=REG[rayonDetecte];
 
-  var dtfm=txt.match(/DTF\s+SUD\s+EST\s+([\d,\.]+)\s+([-\d,\.]+)\s*%\s*([\d\s]+?)\s+([\d,\.]+)/i);
+  var dtfm=txt.match(/DTF\s+SUD\s+EST\s+([\d,\.]+)\s+([-\d,\.]+)\s*%\s*[▲▼►]?\s*([\d\s]+?)\s+([-\d,\.]+)\s*%\s*[▲▼►]?\s+([\d,\.]+)/i);
+  console.log('[Comparaison] Recherche ligne DTF...');
   if(dtfm){
-    reg.dtf.ca=pN(dtfm[1]); reg.dtf.ev=pN(dtfm[2]);
+    console.log('[Comparaison] ✓ DTF trouvé - match complet:',dtfm[0]);
+    reg.dtf.ca=pN(dtfm[1]); 
+    reg.dtf.ev=pN(dtfm[2]);
     reg.dtf.deb=parseInt(dtfm[3].replace(/\s/g,''))||0;
-    reg.dtf.pan=pN(dtfm[4]);
+    reg.dtf.pan=pN(dtfm[5]); // dtfm[4] est l'évol débits, dtfm[5] est le panier
+    console.log('[Comparaison] DTF extrait - CA:',reg.dtf.ca,'EV:',reg.dtf.ev,'DEB:',reg.dtf.deb,'PAN:',reg.dtf.pan);
+  } else {
+    console.warn('[Comparaison] ✗ Ligne DTF non trouvée dans le PDF');
+    // Afficher les premières lignes du PDF pour debug
+    console.log('[Comparaison] Extrait du PDF:',txt.substring(0,500));
   }
 
   txt.split('\n').forEach(function(ligne){
