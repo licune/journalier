@@ -670,7 +670,7 @@ var MSG_POS=[
 ];
 var MSG_NEG=[
   {t:"Point d'amélioration :",s:"Les stocks négatifs sont à corriger en priorité pour fiabiliser les commandes automatiques."},
-  {t:"Point d'amélioration :",s:"Les ruptures assortiment pénalisent le CA — chasse aux trous et commande 1 carton pour chaque référence manquante."},
+  {t:"Point d'amélioration :",s:"Les ruptures catalogue pénalisent le CA — chasse aux trous et commande 1 carton pour chaque référence manquante."},
   {t:"Point d'amélioration :",s:"Le chiffre d'affaires est en recul — renforcer le facing et la disponibilité produit pour limiter la perte."},
   {t:"Point d'amélioration :",s:"La marge est sous pression — contrôler les prix d'achat et limiter les démarques non justifiées."},
   {t:"Point d'amélioration :",s:"L'écart au budget persiste — chaque vente compte pour rattraper le retard."}
@@ -717,8 +717,8 @@ function genBrief(){
   var al=[];
   if(d.stk>20)     al.push({t:'bad',l:'⚠ '+d.stk+' stocks négatifs'});
   else if(d.stk>0) al.push({t:'warn',l:d.stk+' stocks négatifs'});
-  if(d.rupt>50)     al.push({t:'bad',l:'⚠ '+d.rupt+' ruptures assortiment'});
-  else if(d.rupt>0) al.push({t:'warn',l:d.rupt+' ruptures assortiment'});
+  if(d.rupt>50)     al.push({t:'bad',l:'⚠ '+d.rupt+' ruptures catalogue'});
+  else if(d.rupt>0) al.push({t:'warn',l:d.rupt+' ruptures catalogue'});
   if(d.ev<-15)  al.push({t:'bad',l:'CA en forte baisse ('+(d.ev>=0?'+':'')+d.ev.toFixed(1)+'%)'});
   if(d.dm<-3)   al.push({t:'bad',l:'Marge en recul ('+(d.dm>=0?'+':'')+d.dm.toFixed(2)+' pts)'});
   if(d.dm>2)    al.push({t:'good',l:'✓ Marge en progression (+'+d.dm.toFixed(2)+' pts)'});
