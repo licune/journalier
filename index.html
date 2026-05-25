@@ -140,15 +140,6 @@ textarea:focus{outline:none;border-color:var(--lblue)}
       <button class="btn btn-org" id="btn-reg" onclick="affReg()" disabled>🌍 Classement Région</button>
       <div class="stat" id="stat">Chargez les PDFs Darwin pour alimenter les données.</div>
     </div>
-    <div style="margin-top:10px;padding:10px;background:#f0f6ff;border-radius:6px;border:1px solid #dbeafe;display:flex;align-items:center;gap:10px;flex-wrap:wrap">
-      <label style="display:flex;align-items:center;gap:6px;cursor:pointer;font-size:13px;font-weight:600;color:#1e40af">
-        <input type="checkbox" id="chk-ia" onchange="toggleModeIA()" checked style="cursor:pointer">
-        <span>✨ Consignes intelligentes (IA + Web)</span>
-      </label>
-      <span id="ia-status" style="font-size:11px;color:#059669;font-weight:600">● En ligne</span>
-      <button class="btn" id="btn-regen" onclick="regenererConsignes()" disabled style="background:#fff;border:1.5px solid #8b5cf6;color:#8b5cf6;font-size:12px;padding:6px 12px">🔄 Régénérer</button>
-      <span style="font-size:11px;color:#6b7280;flex:1;min-width:200px">Les consignes sont générées dynamiquement avec actualités secteur et adaptation au contexte.</span>
-    </div>
   </div>
   <div id="brief"><div id="brief-c"></div></div>
 </div>
@@ -247,11 +238,6 @@ var RAYON_PDF_COMPAR = null; // Ajout : rayon détecté dans le PDF comparaison
 var SHOT = null; // modifications temporaires consignes (one-shot)
 var mOp1='', mOp2='', mCl=''; // consignes manuelles persistantes
 var rayonK = null; // rayon actuellement sélectionné
-
-// Système IA
-var MODE_IA = true; // Mode IA activé par défaut
-var CONSIGNES_IA_CACHE = {}; // Cache des consignes générées par IA (évite appels multiples)
-var GENERATION_EN_COURS = false; // Flag pour éviter double génération
 
 Object.keys(META).forEach(function(k){
   D[k]={ca:0,ev:0,bud:0,taux:0,dm:0,rang:0,er:0,stk:0,rupt:0};
@@ -608,190 +594,7 @@ setupF('f-c','lb-c','fn-c', parserCompar);
 function setStat(msg,cls){var el=document.getElementById('stat');el.textContent=msg;el.className='stat '+(cls||'');}
 
 // ═══════════════════════════════════════════════════
-// SYSTÈME IA - Génération dynamique avec web search
-// ═══════════════════════════════════════════════════
-function toggleModeIA(){
-  MODE_IA = document.getElementById('chk-ia').checked;
-  document.getElementById('btn-regen').disabled = !MODE_IA;
-  CONSIGNES_IA_CACHE = {}; // Vider le cache si on change de mode
-  console.log('[IA] Mode',MODE_IA?'activé':'désactivé');
-}
-
-function regenererConsignes(){
-  if(!rayonK){
-    alert('Sélectionnez d\'abord un rayon puis générez un brief.');
-    return;
-  }
-  // Vider le cache pour ce rayon
-  delete CONSIGNES_IA_CACHE[rayonK];
-  console.log('[IA] Cache vidé pour rayon',rayonK,'- régénération au prochain brief');
-  alert('Les consignes seront régénérées lors du prochain brief.');
-}
-
-async function genererConsignesIA(rayon){
-  var m=META[rayon], d=D[rayon]||{};
-  var type=m.t; // pgc, pls, pft, na
-  
-  // Construire le contexte pour l'IA
-  var date = new Date();
-  var mois = ['janvier','février','mars','avril','mai','juin','juillet','août','septembre','octobre','novembre','décembre'][date.getMonth()];
-  var saison = date.getMonth()>=5&&date.getMonth()<=8?'été':'hiver';
-  
-  var contexte = {
-    rayon: m.n + ' - ' + m.nom,
-    famille: m.par,
-    type: type,
-    ca: d.ca,
-    evol: d.ev,
-    ruptures: d.rupt,
-    stocks_negatifs: d.stk,
-    rang: d.rang,
-    er: d.er,
-    taux_marge: d.taux,
-    diff_marge: d.dm,
-    date: DATE_STR || date.toLocaleDateString('fr-FR'),
-    mois: mois,
-    saison: saison
-  };
-  
-  // Construire le prompt pour Claude
-  var prompt = construirePrompt(contexte);
-  
-  console.log('[IA] Génération consignes pour rayon',rayon,'...');
-  setStat('✨ Génération intelligente des consignes en cours...','');
-  
-  try {
-    // Appel API Claude avec web search
-    var response = await fetch("https://api.anthropic.com/v1/messages", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        model: "claude-sonnet-4-20250514",
-        max_tokens: 4000,
-        messages: [{
-          role: "user",
-          content: prompt
-        }],
-        tools: [{
-          type: "web_search_20250305",
-          name: "web_search"
-        }]
-      })
-    });
-    
-    if(!response.ok){
-      throw new Error('API error: '+response.status);
-    }
-    
-    var data = await response.json();
-    
-    // Extraire le texte de la réponse (gérer les blocs multiples)
-    var texte = data.content
-      .map(function(item){return item.type==='text'?item.text:'';})
-      .filter(Boolean)
-      .join('\n');
-    
-    // Parser la réponse JSON
-    var consignes = parseConsignesIA(texte);
-    
-    if(consignes){
-      console.log('[IA] ✓ Consignes générées avec succès');
-      setStat('✓ Consignes intelligentes générées','ok');
-      return consignes;
-    } else {
-      throw new Error('Parsing failed');
-    }
-    
-  } catch(err){
-    console.warn('[IA] Erreur génération:',err);
-    setStat('⚠ Mode IA indisponible - consignes statiques utilisées','warn');
-    return null; // Fallback vers consignes statiques
-  }
-}
-
-function construirePrompt(ctx){
-  var metier = ctx.type==='pgc'?'PGC (Produits de Grande Consommation)':
-               ctx.type==='pls'?'PLS (Produits Libre Service Frais)':
-               ctx.type==='pft'?'PFT (Produits Frais Traditionnels)':
-               'Non Alimentaire';
-  
-  var alertes = [];
-  if(ctx.ruptures>50) alertes.push(ctx.ruptures+' ruptures catalogue (critique)');
-  else if(ctx.ruptures>0) alertes.push(ctx.ruptures+' ruptures catalogue');
-  if(ctx.stocks_negatifs>20) alertes.push(ctx.stocks_negatifs+' stocks négatifs (critique)');
-  else if(ctx.stocks_negatifs>0) alertes.push(ctx.stocks_negatifs+' stocks négatifs');
-  if(ctx.evol<-10) alertes.push('CA en forte baisse ('+ctx.evol.toFixed(1)+'%)');
-  if(ctx.diff_marge<-3) alertes.push('Marge en recul ('+ctx.diff_marge.toFixed(2)+' pts)');
-  
-  var prompt = `Tu es un expert en grande distribution travaillant pour Carrefour France.
-
-CONTEXTE :
-- Rayon : ${ctx.rayon} (${metier})
-- Date : ${ctx.date} (${ctx.mois}, ${ctx.saison})
-- CA du jour : ${ctx.ca.toFixed(1)} K€ (${ctx.evol>=0?'+':''}${ctx.evol.toFixed(1)}% vs N-1)
-- Rang national : ${ctx.rang} (${ctx.er>=0?'+':''}${ctx.er} places)
-- Taux de marge : ${ctx.taux_marge.toFixed(2)}% (${ctx.diff_marge>=0?'+':''}${ctx.diff_marge.toFixed(2)} pts vs N-1)
-${alertes.length>0?'- ALERTES : '+alertes.join(', '):''}
-
-MISSION :
-Génère 3 consignes opérationnelles + 3 consignes propreté pour le brief journalier du chef de rayon.
-
-CRITÈRES IMPÉRATIFS :
-1. **Pertinence métier** : Adaptées au secteur ${metier} et aux spécificités du rayon
-2. **Contexte chiffré** : Tenir compte des alertes (ruptures, stocks négatifs, baisse CA, etc.)
-3. **Saisonnalité** : Intégrer les contraintes de ${ctx.saison} et du mois de ${ctx.mois}
-4. **Actualité** : Si pertinent, rechercher et intégrer les nouveautés réglementaires, normes, rappels produits, ou tendances récentes du secteur
-5. **Actionnable** : Consignes concrètes, précises, applicables immédiatement
-6. **Ton professionnel** : Direct, opérationnel, sans jargon inutile
-
-CONSIGNES OPÉRATIONNELLES (priorités métier) :
-- ${ctx.type==='pft'?'Traçabilité, DLC, qualité produit':ctx.type==='pls'?'DLC frais, rotation, chaîne du froid':'DLC/DDM, ruptures, SMP'}
-- Gestion des ${ctx.ruptures>0?'ruptures ('+ctx.ruptures+' références manquantes)':'stocks et disponibilité'}
-- ${ctx.stocks_negatifs>0?'Correction des '+ctx.stocks_negatifs+' stocks négatifs':'Optimisation SMP'}
-
-CONSIGNES PROPRETÉ (hygiène et présentation) :
-- ${ctx.type==='pft'||ctx.type==='pls'?'Meubles froids, température, nettoyage':'Réserve, linéaire, facing'}
-- ${ctx.type==='pft'?'Plans de travail, ustensiles, cahier d\'hygiène':'Organisation, rangement'}
-- Présentation rayon, attractivité
-
-IMPORTANT :
-- Recherche web uniquement si actualités pertinentes existent (rappels, nouvelles normes, tendances saisonnières)
-- Ne pas inventer de données, rester factuel
-- Varier les formulations, éviter les répétitions
-- Chaque consigne = 1 phrase claire et actionnable
-
-FORMAT DE RÉPONSE (JSON strict) :
-{
-  "operationnelles": ["consigne 1", "consigne 2", "consigne 3"],
-  "proprete": ["consigne 1", "consigne 2", "consigne 3"]
-}
-
-Réponds UNIQUEMENT avec le JSON, rien d'autre.`;
-
-  return prompt;
-}
-
-function parseConsignesIA(texte){
-  try {
-    // Nettoyer le texte (retirer markdown, espaces)
-    var clean = texte.replace(/```json|```/g,'').trim();
-    var obj = JSON.parse(clean);
-    
-    if(obj.operationnelles && obj.proprete && 
-       obj.operationnelles.length===3 && obj.proprete.length===3){
-      return obj;
-    }
-    return null;
-  } catch(e){
-    console.error('[IA] Erreur parsing:',e);
-    return null;
-  }
-}
-
-// ═══════════════════════════════════════════════════
-// CONSIGNES — sélection IA ou statique
+// CONSIGNES — Templates préservés, modifications temporaires
 // ═══════════════════════════════════════════════════
 function rnd(arr){return arr[Math.floor(Math.random()*arr.length)];}
 
@@ -1286,41 +1089,7 @@ function fmtC(s){
   return s;
 }
 
-async function getCons(k){
-  // Si mode IA activé, essayer de récupérer les consignes IA
-  if(MODE_IA && !SHOT){
-    // Vérifier le cache
-    if(CONSIGNES_IA_CACHE[k]){
-      console.log('[IA] Consignes récupérées depuis le cache pour rayon',k);
-      return CONSIGNES_IA_CACHE[k];
-    }
-    
-    // Générer via IA si pas en cache
-    if(!GENERATION_EN_COURS){
-      GENERATION_EN_COURS = true;
-      var consignesIA = await genererConsignesIA(k);
-      GENERATION_EN_COURS = false;
-      
-      if(consignesIA){
-        // Succès IA : stocker dans le cache et retourner
-        var resultat = {
-          op: consignesIA.operationnelles,
-          cl: consignesIA.proprete
-        };
-        CONSIGNES_IA_CACHE[k] = resultat;
-        document.getElementById('ia-status').textContent = '● En ligne';
-        document.getElementById('ia-status').style.color = '#059669';
-        return resultat;
-      } else {
-        // Échec IA : fallback sur statique
-        console.log('[IA] Fallback vers consignes statiques');
-        document.getElementById('ia-status').textContent = '● Hors ligne - Mode statique';
-        document.getElementById('ia-status').style.color = '#ea580c';
-      }
-    }
-  }
-  
-  // Mode statique (fallback ou mode IA désactivé)
+function getCons(k){
   var t=META[k]?META[k].t:'na'; var op=[],cl=[];
   if(t==='pgc'){op=[lC('pgc_o1'),lC('pgc_o2'),lC('pgc_o3')];cl=[lC('pgc_c1'),lC('pgc_c2'),lC('pgc_c3')];}
   else if(t==='pls'){op=[lC('pls_o1'),lC('pls_o2'),lC('pls_o3')];cl=[lC('pls_c1'),lC('pls_c2'),lC('pls_c3')];}
@@ -1377,14 +1146,14 @@ function onSel(){
 
 function sg(v){return v>=0?'up':'dn';}
 
-async function genBrief(){
+function genBrief(){
   var k=document.getElementById('sel').value;
   if(!k){alert('Veuillez choisir un rayon.');return;}
   rayonK=k;
   var m=META[k], d=D[k]||{};
 
-  // Lire consignes AVANT reset (SHOT temporaire) - AWAIT car getCons est async
-  var c=await getCons(k);
+  // Lire consignes AVANT reset (SHOT temporaire)
+  var c=getCons(k);
   SHOT=null; // réinitialisation après usage (one-shot)
   majBtnEdit();
 
@@ -1452,11 +1221,6 @@ async function genBrief(){
   document.getElementById('brief').style.display='block';
   document.getElementById('brief').scrollIntoView({behavior:'smooth',block:'start'});
   verifierCorrespondanceRayon(); // re-vérifier après génération
-  
-  // Activer le bouton régénérer si mode IA activé
-  if(MODE_IA){
-    document.getElementById('btn-regen').disabled=false;
-  }
 }
 
 // ═══════════════════════════════════════════════════
