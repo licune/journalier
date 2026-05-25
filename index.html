@@ -140,6 +140,15 @@ textarea:focus{outline:none;border-color:var(--lblue)}
       <button class="btn btn-org" id="btn-reg" onclick="affReg()" disabled>🌍 Classement Région</button>
       <div class="stat" id="stat">Chargez les PDFs Darwin pour alimenter les données.</div>
     </div>
+    <div style="margin-top:10px;padding:10px;background:#f0f6ff;border-radius:6px;border:1px solid #dbeafe;display:flex;align-items:center;gap:10px;flex-wrap:wrap">
+      <label style="display:flex;align-items:center;gap:6px;cursor:pointer;font-size:13px;font-weight:600;color:#1e40af">
+        <input type="checkbox" id="chk-ia" onchange="toggleModeIA()" checked style="cursor:pointer">
+        <span>✨ Consignes intelligentes (IA + Web)</span>
+      </label>
+      <span id="ia-status" style="font-size:11px;color:#059669;font-weight:600">● En ligne</span>
+      <button class="btn" id="btn-regen" onclick="regenererConsignes()" disabled style="background:#fff;border:1.5px solid #8b5cf6;color:#8b5cf6;font-size:12px;padding:6px 12px">🔄 Régénérer</button>
+      <span style="font-size:11px;color:#6b7280;flex:1;min-width:200px">Les consignes sont générées dynamiquement avec actualités secteur et adaptation au contexte.</span>
+    </div>
   </div>
   <div id="brief"><div id="brief-c"></div></div>
 </div>
@@ -238,6 +247,11 @@ var RAYON_PDF_COMPAR = null; // Ajout : rayon détecté dans le PDF comparaison
 var SHOT = null; // modifications temporaires consignes (one-shot)
 var mOp1='', mOp2='', mCl=''; // consignes manuelles persistantes
 var rayonK = null; // rayon actuellement sélectionné
+
+// Système IA
+var MODE_IA = true; // Mode IA activé par défaut
+var CONSIGNES_IA_CACHE = {}; // Cache des consignes générées par IA (évite appels multiples)
+var GENERATION_EN_COURS = false; // Flag pour éviter double génération
 
 Object.keys(META).forEach(function(k){
   D[k]={ca:0,ev:0,bud:0,taux:0,dm:0,rang:0,er:0,stk:0,rupt:0};
@@ -594,39 +608,665 @@ setupF('f-c','lb-c','fn-c', parserCompar);
 function setStat(msg,cls){var el=document.getElementById('stat');el.textContent=msg;el.className='stat '+(cls||'');}
 
 // ═══════════════════════════════════════════════════
-// CONSIGNES — Templates préservés, modifications temporaires
+// SYSTÈME IA - Génération dynamique avec web search
+// ═══════════════════════════════════════════════════
+function toggleModeIA(){
+  MODE_IA = document.getElementById('chk-ia').checked;
+  document.getElementById('btn-regen').disabled = !MODE_IA;
+  CONSIGNES_IA_CACHE = {}; // Vider le cache si on change de mode
+  console.log('[IA] Mode',MODE_IA?'activé':'désactivé');
+}
+
+function regenererConsignes(){
+  if(!rayonK){
+    alert('Sélectionnez d\'abord un rayon puis générez un brief.');
+    return;
+  }
+  // Vider le cache pour ce rayon
+  delete CONSIGNES_IA_CACHE[rayonK];
+  console.log('[IA] Cache vidé pour rayon',rayonK,'- régénération au prochain brief');
+  alert('Les consignes seront régénérées lors du prochain brief.');
+}
+
+async function genererConsignesIA(rayon){
+  var m=META[rayon], d=D[rayon]||{};
+  var type=m.t; // pgc, pls, pft, na
+  
+  // Construire le contexte pour l'IA
+  var date = new Date();
+  var mois = ['janvier','février','mars','avril','mai','juin','juillet','août','septembre','octobre','novembre','décembre'][date.getMonth()];
+  var saison = date.getMonth()>=5&&date.getMonth()<=8?'été':'hiver';
+  
+  var contexte = {
+    rayon: m.n + ' - ' + m.nom,
+    famille: m.par,
+    type: type,
+    ca: d.ca,
+    evol: d.ev,
+    ruptures: d.rupt,
+    stocks_negatifs: d.stk,
+    rang: d.rang,
+    er: d.er,
+    taux_marge: d.taux,
+    diff_marge: d.dm,
+    date: DATE_STR || date.toLocaleDateString('fr-FR'),
+    mois: mois,
+    saison: saison
+  };
+  
+  // Construire le prompt pour Claude
+  var prompt = construirePrompt(contexte);
+  
+  console.log('[IA] Génération consignes pour rayon',rayon,'...');
+  setStat('✨ Génération intelligente des consignes en cours...','');
+  
+  try {
+    // Appel API Claude avec web search
+    var response = await fetch("https://api.anthropic.com/v1/messages", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        model: "claude-sonnet-4-20250514",
+        max_tokens: 4000,
+        messages: [{
+          role: "user",
+          content: prompt
+        }],
+        tools: [{
+          type: "web_search_20250305",
+          name: "web_search"
+        }]
+      })
+    });
+    
+    if(!response.ok){
+      throw new Error('API error: '+response.status);
+    }
+    
+    var data = await response.json();
+    
+    // Extraire le texte de la réponse (gérer les blocs multiples)
+    var texte = data.content
+      .map(function(item){return item.type==='text'?item.text:'';})
+      .filter(Boolean)
+      .join('\n');
+    
+    // Parser la réponse JSON
+    var consignes = parseConsignesIA(texte);
+    
+    if(consignes){
+      console.log('[IA] ✓ Consignes générées avec succès');
+      setStat('✓ Consignes intelligentes générées','ok');
+      return consignes;
+    } else {
+      throw new Error('Parsing failed');
+    }
+    
+  } catch(err){
+    console.warn('[IA] Erreur génération:',err);
+    setStat('⚠ Mode IA indisponible - consignes statiques utilisées','warn');
+    return null; // Fallback vers consignes statiques
+  }
+}
+
+function construirePrompt(ctx){
+  var metier = ctx.type==='pgc'?'PGC (Produits de Grande Consommation)':
+               ctx.type==='pls'?'PLS (Produits Libre Service Frais)':
+               ctx.type==='pft'?'PFT (Produits Frais Traditionnels)':
+               'Non Alimentaire';
+  
+  var alertes = [];
+  if(ctx.ruptures>50) alertes.push(ctx.ruptures+' ruptures catalogue (critique)');
+  else if(ctx.ruptures>0) alertes.push(ctx.ruptures+' ruptures catalogue');
+  if(ctx.stocks_negatifs>20) alertes.push(ctx.stocks_negatifs+' stocks négatifs (critique)');
+  else if(ctx.stocks_negatifs>0) alertes.push(ctx.stocks_negatifs+' stocks négatifs');
+  if(ctx.evol<-10) alertes.push('CA en forte baisse ('+ctx.evol.toFixed(1)+'%)');
+  if(ctx.diff_marge<-3) alertes.push('Marge en recul ('+ctx.diff_marge.toFixed(2)+' pts)');
+  
+  var prompt = `Tu es un expert en grande distribution travaillant pour Carrefour France.
+
+CONTEXTE :
+- Rayon : ${ctx.rayon} (${metier})
+- Date : ${ctx.date} (${ctx.mois}, ${ctx.saison})
+- CA du jour : ${ctx.ca.toFixed(1)} K€ (${ctx.evol>=0?'+':''}${ctx.evol.toFixed(1)}% vs N-1)
+- Rang national : ${ctx.rang} (${ctx.er>=0?'+':''}${ctx.er} places)
+- Taux de marge : ${ctx.taux_marge.toFixed(2)}% (${ctx.diff_marge>=0?'+':''}${ctx.diff_marge.toFixed(2)} pts vs N-1)
+${alertes.length>0?'- ALERTES : '+alertes.join(', '):''}
+
+MISSION :
+Génère 3 consignes opérationnelles + 3 consignes propreté pour le brief journalier du chef de rayon.
+
+CRITÈRES IMPÉRATIFS :
+1. **Pertinence métier** : Adaptées au secteur ${metier} et aux spécificités du rayon
+2. **Contexte chiffré** : Tenir compte des alertes (ruptures, stocks négatifs, baisse CA, etc.)
+3. **Saisonnalité** : Intégrer les contraintes de ${ctx.saison} et du mois de ${ctx.mois}
+4. **Actualité** : Si pertinent, rechercher et intégrer les nouveautés réglementaires, normes, rappels produits, ou tendances récentes du secteur
+5. **Actionnable** : Consignes concrètes, précises, applicables immédiatement
+6. **Ton professionnel** : Direct, opérationnel, sans jargon inutile
+
+CONSIGNES OPÉRATIONNELLES (priorités métier) :
+- ${ctx.type==='pft'?'Traçabilité, DLC, qualité produit':ctx.type==='pls'?'DLC frais, rotation, chaîne du froid':'DLC/DDM, ruptures, SMP'}
+- Gestion des ${ctx.ruptures>0?'ruptures ('+ctx.ruptures+' références manquantes)':'stocks et disponibilité'}
+- ${ctx.stocks_negatifs>0?'Correction des '+ctx.stocks_negatifs+' stocks négatifs':'Optimisation SMP'}
+
+CONSIGNES PROPRETÉ (hygiène et présentation) :
+- ${ctx.type==='pft'||ctx.type==='pls'?'Meubles froids, température, nettoyage':'Réserve, linéaire, facing'}
+- ${ctx.type==='pft'?'Plans de travail, ustensiles, cahier d\'hygiène':'Organisation, rangement'}
+- Présentation rayon, attractivité
+
+IMPORTANT :
+- Recherche web uniquement si actualités pertinentes existent (rappels, nouvelles normes, tendances saisonnières)
+- Ne pas inventer de données, rester factuel
+- Varier les formulations, éviter les répétitions
+- Chaque consigne = 1 phrase claire et actionnable
+
+FORMAT DE RÉPONSE (JSON strict) :
+{
+  "operationnelles": ["consigne 1", "consigne 2", "consigne 3"],
+  "proprete": ["consigne 1", "consigne 2", "consigne 3"]
+}
+
+Réponds UNIQUEMENT avec le JSON, rien d'autre.`;
+
+  return prompt;
+}
+
+function parseConsignesIA(texte){
+  try {
+    // Nettoyer le texte (retirer markdown, espaces)
+    var clean = texte.replace(/```json|```/g,'').trim();
+    var obj = JSON.parse(clean);
+    
+    if(obj.operationnelles && obj.proprete && 
+       obj.operationnelles.length===3 && obj.proprete.length===3){
+      return obj;
+    }
+    return null;
+  } catch(e){
+    console.error('[IA] Erreur parsing:',e);
+    return null;
+  }
+}
+
+// ═══════════════════════════════════════════════════
+// CONSIGNES — sélection IA ou statique
 // ═══════════════════════════════════════════════════
 function rnd(arr){return arr[Math.floor(Math.random()*arr.length)];}
 
 // Templates de base (JAMAIS modifiés)
 var CV={
-  pgc_o1:["Contrôle DLC / DDM : Tour du rayon, retirer tout produit périmé. Priorité aux bas-de-rayon et têtes de gondole.","Vérification des dates : Parcourir l'ensemble du linéaire, écarter les produits arrivés à date. Attention aux zones basses.","Tour DLC / DDM : Retirer sans exception tout article périmé. Insister sur les emplacements difficiles d'accès."],
-  pgc_o2:["Ruptures : Pour chaque trou — vérifier le stock, corriger si erroné, passer 1 carton commande client, ajuster le SMP si besoin.","Chasse aux ruptures : Repérer chaque référence manquante, corriger les stocks, relancer via 1 carton commande client et revoir le SMP.","Tour des ruptures : Identifier les emplacements vides, corriger le stock, commander 1 carton pour réamorcer l'automatique, ajuster le SMP."],
-  pgc_o3:["SMP : Vérifier que le Stock Mini Permanent reflète la rotation réelle. Corriger les valeurs à 0 ou sous-dimensionnées.","Mise à jour des SMP : Contrôler que le SMP est adapté à la vitesse d'écoulement. Revaloriser si insuffisant.","SMP à ajuster : Après traitement des ruptures, s'assurer que les minima correspondent à la réalité. Relever ceux trop bas."],
-  pgc_c1:["Réserve : Évacuer cartons et emballages vides, ranger proprement, allées dégagées.","Rangement réserve : Désencombrer les allées, retirer les emballages inutiles, vérifier l'accès aux issues.","Réserve : Sortir les cartons vides, libérer les passages, ranger les produits de façon ordonnée."],
-  pgc_c2:["Linéaire : Contrôler chaque étagère, redresser les articles déplacés, vérifier la stabilité des tablettes.","Vérification étagères : Repositionner les articles tombés ou mal alignés, s'assurer que les rayonnages sont en bon état.","Tour des rayonnages : Redresser ce qui est renversé, contrôler l'état et la propreté des tablettes."],
-  pgc_c3:["Facing : Remettre tous les produits face-client, boucher les trous de présentation, vérifier les étiquettes de prix.","Tenue du rayon : Facing complet, contrôle des prix, aucun trou apparent.","Facing & prix : Repositionner face-client, combler les vides, chaque référence correctement étiquetée."],
-  pls_o1:["DLC frais : Tour des meubles réfrigérés, retirer tout produit périmé. Vérifier l'intégrité des emballages et les étiquettes.","Contrôle DLC : Parcourir les frais libre-service, écarter les articles arrivés à date. Contrôler l'état des conditionnements.","Tour DLC frais LS : Inspecter chaque meuble, sortir les produits périmés, vérifier la traçabilité."],
-  pls_o2:["Ruptures : Repérer chaque trou, corriger le stock si erroné, 1 carton commande client, ajuster le SMP.","Chasse aux ruptures : Identifier les manquants, corriger les stocks négatifs, relancer via 1 carton commande client, revoir les SMP.","Tour des ruptures : Pour chaque vide — corriger le stock, commander 1 carton pour réamorcer l'automatique, puis vérifier le SMP."],
-  pls_o3:["SMP : Vérifier que le Stock Mini Permanent est cohérent avec la rotation journalière. Relever les valeurs insuffisantes.","Mise à jour SMP : Minima à refléter la réalité de vente. Corriger si nécessaire.","SMP à contrôler : Vérifier l'adéquation du SMP avec la vitesse d'écoulement. Revaloriser les SMP trop bas."],
-  pls_c1:["Chambre froide & réserve : Dégager les allées, évacuer les emballages vides, produits bien identifiés.","Réserve PLS : Sortir les cartons vides, libérer les accès, vérifier l'organisation et la lisibilité.","Rangement réserve : Désencombrer la chambre froide, évacuer les emballages, allées libres."],
-  pls_c2:["Meubles froids : Contrôler les températures (+4°C max frais / -18°C surgel.). Nettoyer vitrines, joints et étagères. Signaler toute anomalie.","Températures & nettoyage : Vérifier les relevés de chaque meuble, nettoyer les surfaces, noter tout écart dans le cahier.","Contrôle froid : Tour des températures, nettoyage des vitrines et joints, signalement immédiat si anomalie."],
-  pls_c3:["Linéaire frais : Redresser les articles mal positionnés, contrôler les étagères, vérifier les étiquettes de prix.","Tenue étagères : Repositionner les produits déplacés, bon état des rayonnages, contrôler les prix.","Tour rayonnages : Vérifier l'alignement des produits, l'état des tablettes et la conformité des affichages de prix."],
-  pft_tb:["Traçabilité & origine : Vérifier lot, date de réception et origine sur chaque produit en vitrine. Contrôler l'affichage réglementaire.","Contrôle traçabilité : Fiche complète (lot, réception, origine) pour chaque article. Affichage de l'origine conforme.","Traçabilité obligatoire : Lot, date et origine documentés sur chaque produit. Vérifier l'étiquetage vitrine."],
-  pft_fl:["Origine & traçabilité : Vérifier l'affichage de l'origine sur chaque produit. Retirer tout article sans fiche conforme.","Fiches origine : Chaque référence affiche son origine complète. Écarter les produits sans traçabilité. Fraîcheur de l'étalage.","Contrôle origine : Étiquettes d'origine à jour et lisibles, fiches traçabilité présentes, fraîcheur visuelle de l'étalage."],
-  pft_bo:["Allergènes & DLC : Vérifier que les 14 allergènes sont affichés lisiblement pour chaque produit maison. Retirer les articles périmés.","Contrôle allergènes : Affichage complet et à jour. DLC vérifiées, produits périmés retirés sans exception.","Étiquetage allergènes : Chaque préparation maison doit afficher les 14 allergènes réglementaires. Contrôle DLC simultané."],
-  pft_dl:["DLC & qualité : Vérifier les dates en vitrine et réserve. Retirer tout article périmé ou présentant un défaut d'aspect.","Tour DLC frais : Inspecter vitrine et réserve, écarter les produits arrivés à date ou abîmés, contrôler les conditionnements.","Contrôle qualité & DLC : Parcourir l'intégralité des produits frais, retirer les hors-date et articles en mauvais état."],
-  pft_o2:["Ruptures : Pour chaque emplacement vide — corriger le stock, 1 carton commande client pour relancer l'automatique.","Chasse aux ruptures : Repérer les trous, corriger les stocks, commander 1 carton pour réamorcer les commandes automatiques.","Tour des ruptures : Identifier les absences, corriger les stocks négatifs, relancer via 1 carton commande client."],
-  pft_o3:["SMP & marge : Vérifier les SMP des ruptures traitées, corriger les valeurs insuffisantes. Contrôler les coûts d'achat.","Mise à jour SMP : Minima à la hauteur de la rotation. Vérifier le prix d'achat pour la marge.","SMP & coût d'achat : Revaloriser les SMP trop bas, contrôler les tarifs des dernières livraisons pour la marge."],
-  pft_c1:["Meubles froids : Relever les températures, nettoyer vitrines, joints et bacs. Consigner toute anomalie dans le cahier d'hygiène.","Contrôle froid & nettoyage : Vérifier les températures, nettoyer les surfaces, signaler tout écart.","Températures & hygiène : Tour des relevés de froid, nettoyage complet, traçabilité dans le cahier."],
-  pft_c2:["Réserve & chambre froide : Évacuer déchets et emballages de découpe, dégager les allées et sorties de secours.","Rangement réserve : Sortir les emballages usagés, libérer les accès, issues de secours dégagées.","Chambre froide : Évacuer les déchets, désencombrer les allées, accès libres et sécurisés."],
-  pft_c3:["Plans de travail : Désinfecter plans, planches et ustensiles. Nettoyer le sol de la zone PFT. Consigner dans le cahier.","Nettoyage zone PFT : Désinfecter les surfaces et outils, nettoyer le sol, traçabilité dans le cahier.","Hygiène zone de production : Désinfecter après chaque usage, nettoyer le sol, renseigner le cahier d'hygiène."],
-  na_o1:["Facing & rangement : Remettre chaque article à sa place, facing face-client sur toutes les étagères, vérifier les étiquettes de prix.","Tenue du rayon : Replacer les articles selon le plan, facing complet, chaque référence correctement balisée.","Rangement & facing : Remettre en ordre l'ensemble du rayon, facing soigné, contrôle des prix et du balisage."],
-  na_o2:["Ruptures : Pour chaque manquant — corriger le stock si erroné, 1 carton commande client pour relancer l'automatique, ajuster le SMP.","Chasse aux ruptures : Repérer les trous, corriger les stocks, passer 1 carton commande client, revoir les SMP.","Tour des ruptures : Identifier les absences, corriger le stock, relancer via 1 carton commande client, vérifier le SMP."],
-  na_o3:["SMP : Vérifier que le Stock Mini Permanent reflète la vitesse de vente. Corriger les valeurs à 0 ou insuffisantes.","Mise à jour SMP : Minima à garantir le réapprovisionnement automatique. Corriger si nécessaire.","SMP à revoir : Contrôler et ajuster le SMP pour éviter que les ruptures se reproduisent."],
-  na_c1:["Réserve : Évacuer cartons vides et emballages, dégager les allées et sorties de secours, vérifier l'état du mobilier.","Rangement réserve : Sortir les emballages inutiles, libérer les accès, contrôler le mobilier de stockage.","Réserve : Désencombrer, évacuer les déchets, s'assurer que les issues restent libres."],
-  na_c2:["Linéaire : Contrôler l'état de chaque étagère, redresser les articles déplacés, vérifier la stabilité des tablettes.","Tour des rayonnages : Repositionner les articles tombés ou mal alignés, vérifier la solidité des étagères.","Vérification étagères : Redresser ce qui est renversé, contrôler les tablettes et signaler toute dégradation."],
-  na_c3:["Tenue visuelle : Dépoussiérer les étagères et articles exposés, soigner les têtes de gondole, allées propres.","Propreté rayon : Dépoussiérer, soigner la mise en scène des têtes de gondole, vérifier la propreté des allées.","Présentation : Dépoussiérer l'ensemble, mettre en valeur les têtes de gondole, maintenir les allées libres et propres."]
+  pgc_o1:[
+    // DLC/DDM - Variantes génériques
+    "Contrôle DLC / DDM : Tour du rayon, retirer tout produit périmé. Priorité aux bas-de-rayon et têtes de gondole.",
+    "Vérification des dates : Parcourir l'ensemble du linéaire, écarter les produits arrivés à date. Attention aux zones basses.",
+    "Tour DLC / DDM : Retirer sans exception tout article périmé. Insister sur les emplacements difficiles d'accès.",
+    "DLC / DDM : Inspection complète du rayon. Commencer par les produits à rotation lente, puis les promotions.",
+    "Dates limites : Vérifier systématiquement chaque référence. Retirer les produits à J-2 pour les DLC courtes.",
+    "Contrôle quotidien dates : Parcourir le linéaire de gauche à droite, niveau par niveau. Aucun produit périmé toléré.",
+    "DLC / DDM : Attention particulière aux produits en bout de gondole et displays promotionnels souvent oubliés.",
+    "Tour des dates : Vérifier l'arrière des produits poussés au fond. Les clients prennent devant, le fond peut être périmé.",
+    // DLC/DDM - Variantes été (chaleur)
+    "DLC / DDM renforcé : Avec la chaleur, les produits se dégradent plus vite. Redoubler de vigilance sur les dates.",
+    "Contrôle dates été : Température ambiante élevée = risques accrus. Vérifier particulièrement les produits sensibles à la chaleur.",
+    "Tour DLC saison chaude : Les fortes températures accélèrent la péremption. Inspection rigoureuse, retrait anticipé si doute.",
+    // DLC/DDM - Variantes hiver/fêtes
+    "DLC / DDM avant fêtes : Flux important = rotation rapide. Vérifier les réassorts massifs pour éviter les lots anciens.",
+    "Contrôle dates fin d'année : Produits de fête à surveiller. Les stocks saisonniers peuvent masquer des dates limites proches.",
+    // DLC/DDM - Variantes contextuelles
+    "DLC / DDM post-inventaire : Vérifier les produits remontés de réserve. Dates parfois plus anciennes que le linéaire.",
+    "Tour dates après livraison : Les nouveaux arrivages peuvent contenir des dates limites. Contrôler avant mise en rayon.",
+    "DLC / DDM zone promo : Les produits en promotion sont souvent proches de la date. Vérification quotidienne indispensable.",
+    "Contrôle dates produits lents : Les références à faible rotation risquent d'atteindre la DLC. Identifier et surveiller.",
+    "DLC / DDM réserve + linéaire : Ne pas oublier la réserve. Les cartons entamés peuvent contenir des produits à date courte.",
+    "Tour complet dates : Commencer tôt le matin avant l'affluence. Retirer immédiatement les produits identifiés.",
+    "DLC / DDM fin de journée : Dernier contrôle avant fermeture. Les clients manipulent les produits, des dates peuvent apparaître."
+  ],
+  pgc_o2:[
+    // Ruptures - Variantes génériques
+    "Ruptures : Pour chaque trou — vérifier le stock, corriger si erroné, passer 1 carton commande client, ajuster le SMP si besoin.",
+    "Chasse aux ruptures : Repérer chaque référence manquante, corriger les stocks, relancer via 1 carton commande client et revoir le SMP.",
+    "Tour des ruptures : Identifier les emplacements vides, corriger le stock, commander 1 carton pour réamorcer l'automatique, ajuster le SMP.",
+    "Gestion ruptures : Face à chaque trou, trois actions — corriger le stock si négatif, commander 1 carton, vérifier le SMP.",
+    "Ruptures catalogue : Parcourir le linéaire, noter les absences. Stock informatique à jour = commandes automatiques fiables.",
+    "Traitement ruptures : Chaque référence manquante = perte de CA. Action immédiate : correction stock + commande 1 carton.",
+    "Tour anti-ruptures : Les trous visibles découragent le client. Corriger stock, relancer commande, vérifier les minimas.",
+    "Ruptures prioritaires : Commencer par les meilleures ventes. Impact CA maximal. Stock + commande + SMP pour chaque trou.",
+    // Ruptures - Variantes contextuelles (taux élevé)
+    "Ruptures élevées : Situation critique. Mobiliser l'équipe pour traiter TOUS les trous. Stocks + commandes + SMP en urgence.",
+    "Alerte ruptures : Plus de 30 références manquantes = CA en danger. Prioriser par CA décroissant, traiter en bloc.",
+    "Plan d'action ruptures : Taux anormal. Vérifier si problème livraison ou stock. Traiter l'origine + corriger chaque référence.",
+    // Ruptures - Variantes week-end/fêtes
+    "Ruptures avant week-end : Anticiper la demande. Vérifier les stocks et passer les commandes dès maintenant pour sécuriser samedi/dimanche.",
+    "Ruptures post week-end : Le flux du week-end a créé des trous. Tour complet, correction stocks, relance commandes pour la semaine.",
+    // Ruptures - Variantes saisonnières
+    "Ruptures produits de saison : Les références saisonnières sont très demandées. Surveillance renforcée, stocks à jour impératifs.",
+    "Ruptures période chaude : Boissons fraîches et produits d'été en forte rotation. Anticiper les besoins, sécuriser les stocks.",
+    // Ruptures - Variantes opérationnelles
+    "Ruptures fournisseur : Si rupture généralisée d'une marque, proposer alternative au client. Mettre en avant les substituts.",
+    "Ruptures linéaire : Les facing vides créent un effet de vide. Resserrer temporairement les facings voisins en attendant la livraison.",
+    "Ruptures nouvelles références : Les nouveaux produits souvent sous-évalués en SMP. Corriger rapidement si succès constaté.",
+    "Ruptures après inventaire : Post-inventaire, beaucoup de corrections de stocks. Vérifier les commandes automatiques ont bien repris.",
+    "Ruptures récurrentes : Si même référence toujours en rupture, le SMP est sous-dimensionné. Augmenter le minimum permanent."
+  ],
+  pgc_o3:[
+    // SMP - Variantes génériques
+    "SMP : Vérifier que le Stock Mini Permanent reflète la rotation réelle. Corriger les valeurs à 0 ou sous-dimensionnées.",
+    "Mise à jour des SMP : Contrôler que le SMP est adapté à la vitesse d'écoulement. Revaloriser si insuffisant.",
+    "SMP à ajuster : Après traitement des ruptures, s'assurer que les minima correspondent à la réalité. Relever ceux trop bas.",
+    "Stock Mini Permanent : Le SMP pilote les commandes automatiques. Valeur trop basse = ruptures récurrentes. Corriger.",
+    "Contrôle SMP : Comparer le SMP aux ventes quotidiennes. Si vente > SMP, augmenter le minimum pour sécuriser.",
+    "SMP et rotation : Les produits à forte rotation nécessitent des SMP élevés. Vérifier l'adéquation stock/vente.",
+    "Ajustement SMP : Les SMP à 0 bloquent les commandes automatiques. Remettre une valeur cohérente avec l'historique.",
+    "SMP opérationnel : Un bon SMP = pas de ruptures. Vérifier particulièrement les meilleures ventes du rayon.",
+    // SMP - Variantes contextuelles
+    "SMP ruptures récurrentes : Si même produit rupture chaque semaine, le SMP est trop faible. Doubler la valeur minimum.",
+    "SMP nouvelles références : Les nouveautés ont souvent un SMP par défaut trop bas. Ajuster dès les premières ventes.",
+    "SMP promotions : Produits en promo = rotation x3 à x5. Augmenter temporairement le SMP pendant la période promotionnelle.",
+    "SMP saisonniers : Les produits de saison voient leur rotation exploser. Adapter le SMP à la demande saisonnière.",
+    "SMP fin de vie produit : Référence en déréférencement = baisser le SMP pour écouler sans réapprovisionner.",
+    "SMP vs Budget : Surstock visible = SMP peut-être trop élevé. Analyser avant de baisser, risque de rupture.",
+    "SMP et fournisseur : Si fournisseur livre uniquement par palette, adapter le SMP à la contrainte logistique."
+  ],
+  pgc_c1:[
+    // Réserve - Variantes génériques
+    "Réserve : Évacuer cartons et emballages vides, ranger proprement, allées dégagées.",
+    "Rangement réserve : Désencombrer les allées, retirer les emballages inutiles, vérifier l'accès aux issues.",
+    "Réserve : Sortir les cartons vides, libérer les passages, ranger les produits de façon ordonnée.",
+    "Nettoyage réserve : Cartons vides au compacteur, palettes vides évacuées, allées principales libres de tout obstacle.",
+    "Réserve opérationnelle : Les allées encombrées ralentissent le travail et créent des risques. Dégager et ranger.",
+    "Ordre en réserve : Produits rangés par famille, emballages évacués régulièrement, sorties de secours accessibles.",
+    "Réserve propre : Évacuer les déchets d'emballage, balayer les allées, vérifier la propreté générale.",
+    // Réserve - Variantes sécurité
+    "Réserve sécurité : Issues de secours toujours dégagées. Évacuer tout ce qui obstrue les sorties.",
+    "Réserve et accès : En cas d'urgence, les issues doivent être libres. Vérifier qu'aucun carton ne bloque les sorties.",
+    "Réserve circulation : Les transpalettes doivent pouvoir circuler librement. Dégager les allées principales.",
+    // Réserve - Variantes inventaire/réception
+    "Réserve post-livraison : Après chaque réception, évacuer immédiatement les emballages. Ne pas laisser s'accumuler.",
+    "Réserve avant inventaire : Ranger et organiser la réserve facilite le comptage. Préparer les zones à inventorier.",
+    "Réserve rotation stock : Appliquer le FIFO (First In First Out). Les anciens lots doivent sortir en premier.",
+    "Réserve étiquetage : Les cartons en réserve doivent être identifiables. Référence et date de réception visibles.",
+    "Réserve palettes : Palettes filmées stables, empilées correctement, hauteur maximale respectée pour la sécurité."
+  ],
+  pgc_c2:[
+    // Linéaire - Variantes génériques
+    "Linéaire : Contrôler chaque étagère, redresser les articles déplacés, vérifier la stabilité des tablettes.",
+    "Vérification étagères : Repositionner les articles tombés ou mal alignés, s'assurer que les rayonnages sont en bon état.",
+    "Tour des rayonnages : Redresser ce qui est renversé, contrôler l'état et la propreté des tablettes.",
+    "Contrôle linéaire : Parcourir chaque niveau, remettre les produits en place, vérifier que rien ne dépasse dangereusement.",
+    "État des étagères : Vérifier la solidité des fixations, signaler toute tablette endommagée ou instable.",
+    "Linéaire organisé : Produits droits, bien alignés, étiquettes prix visibles. L'ordre facilite l'achat.",
+    "Tour de linéaire : Les clients déplacent les produits. Remettre chaque référence à sa place, niveau par niveau.",
+    // Linéaire - Variantes merchandising
+    "Linéaire et implantation : Respecter le plan merchandising. Chaque produit à son emplacement défini.",
+    "Facing et visibilité : Les produits mal placés sont invisibles pour le client. Respecter les emplacements.",
+    "Linéaire attractif : Produits bien présentés, facings complets, étiquettes droites. La présentation influence l'achat.",
+    // Linéaire - Variantes sécurité
+    "Linéaire sécurité : Produits lourds en bas, légers en haut. Éviter les chutes et accidents.",
+    "Stabilité linéaire : Vérifier qu'aucun produit ne risque de tomber. Les bouteilles doivent être bien calées.",
+    "Linéaire et hauteur : Les produits en hauteur doivent être stables. Ne pas surcharger les niveaux supérieurs.",
+    // Linéaire - Variantes propreté
+    "Linéaire propre : Dépoussiérer les tablettes, retirer les produits sales ou abîmés, nettoyer les traces.",
+    "Propreté étagères : Les tablettes poussiéreuses donnent une image négative. Nettoyer régulièrement."
+  ],
+  pgc_c3:[
+    // Facing - Variantes génériques
+    "Facing : Remettre tous les produits face-client, boucher les trous de présentation, vérifier les étiquettes de prix.",
+    "Tenue du rayon : Facing complet, contrôle des prix, aucun trou apparent.",
+    "Facing & prix : Repositionner face-client, combler les vides, chaque référence correctement étiquetée.",
+    "Facing optimal : Chaque produit visible, face vers le client, étiquette de prix en face du produit correspondant.",
+    "Présentation rayon : Facing soigné = rayon attractif. Remettre face-client après chaque passage client.",
+    "Tour facing : Les clients prennent les produits, le facing se défait. Remettre en ordre régulièrement dans la journée.",
+    "Facing et rotation : En remettant face-client, faire remonter les produits du fond. Rotation FIFO naturelle.",
+    // Facing - Variantes merchandising
+    "Facing commercial : Les produits en promotion méritent un facing renforcé. Multiplier le nombre de faces.",
+    "Facing linéaire : Respecter le nombre de facings défini par le plan merchandising. Ni plus, ni moins.",
+    "Facing et visibilité : Un produit sans facing est invisible. Garantir au moins 1 face pour chaque référence.",
+    "Facing prioritaire : Les meilleures ventes doivent avoir plus de facings. Adapter selon la rotation.",
+    // Facing - Variantes prix
+    "Facing et prix : Chaque étiquette de prix doit être en face du produit. Vérifier la correspondance référence/prix.",
+    "Étiquettes prix : Contrôler que tous les produits ont leur étiquette visible, à jour et au bon emplacement.",
+    "Prix et facing : Après réimplantation, vérifier que les étiquettes suivent. Prix incorrect = perte de confiance client.",
+    // Facing - Variantes promotions
+    "Facing promotions : Les produits en promo doivent être très visibles. Facing renforcé + étiquette promo bien visible.",
+    "Facing opé commerciale : Pendant les promotions, multiplier les facings des références concernées. Impact vente immédiat.",
+    // Facing - Variantes trous
+    "Facing sans rupture : Si rupture temporaire, resserrer les facings voisins. Éviter l'effet de vide.",
+    "Facing et trous : Un trou dans le linéaire décourage l'achat. Combler visuellement en attendant la livraison.",
+    "Facing dense : Rayon plein = rayon attractif. Optimiser les facings pour donner une impression d'abondance."
+  ],
+  pls_o1:[
+    // DLC frais - Variantes génériques
+    "DLC frais : Tour des meubles réfrigérés, retirer tout produit périmé. Vérifier l'intégrité des emballages et les étiquettes.",
+    "Contrôle DLC : Parcourir les frais libre-service, écarter les articles arrivés à date. Contrôler l'état des conditionnements.",
+    "Tour DLC frais LS : Inspecter chaque meuble, sortir les produits périmés, vérifier la traçabilité.",
+    "DLC produits frais : Les DLC courtes nécessitent un contrôle quotidien rigoureux. Retirer à J-1 pour sécuriser.",
+    "Contrôle dates frais : Commencer par les produits à DLC la plus courte (yaourts, crèmes). Puis élargir au reste.",
+    "DLC meubles froids : Parcourir chaque meuble méthodiquement. Les produits poussés au fond sont souvent oubliés.",
+    "Tour fraîcheur : DLC + contrôle visuel. Retirer aussi les produits abîmés même si la date est correcte.",
+    // DLC frais - Variantes été
+    "DLC frais période chaude : Avec la chaleur, les chaînes du froid sont fragilisées. Contrôle renforcé des dates.",
+    "Contrôle DLC été : Températures élevées = risques sanitaires accrus. Retirer tout produit douteux même avant la DLC.",
+    // DLC frais - Variantes matin/soir
+    "DLC frais matin : Premier contrôle de la journée. Retirer les produits arrivés à date pendant la nuit.",
+    "DLC frais fin de journée : Dernier passage avant fermeture. Sécuriser le linéaire pour le lendemain.",
+    // DLC frais - Variantes traçabilité
+    "DLC et traçabilité : En retirant un produit périmé, noter le lot pour traçabilité en cas de rappel.",
+    "Contrôle DLC frais : Vérifier aussi les étiquettes de traçabilité. Date + heure de mise en rayon doivent être lisibles.",
+    // DLC frais - Variantes promotions
+    "DLC promotions frais : Les produits en promo proche DLC se vendent vite. Vérifier que les dates tiennent jusqu'à fin de promo.",
+    "Promo frais : Si DLC trop courte, ne pas mettre en promotion. Risque de devoir retirer avant fin d'opération."
+  ],
+  pls_o2:[
+    // Ruptures PLS - Variantes génériques  
+    "Ruptures : Repérer chaque trou, corriger le stock si erroné, 1 carton commande client, ajuster le SMP.",
+    "Chasse aux ruptures : Identifier les manquants, corriger les stocks négatifs, relancer via 1 carton commande client, revoir les SMP.",
+    "Tour des ruptures : Pour chaque vide — corriger le stock, commander 1 carton pour réamorcer l'automatique, puis vérifier le SMP.",
+    "Ruptures frais LS : Les produits frais à forte rotation génèrent des ruptures rapides. Anticiper et sécuriser les stocks.",
+    "Gestion ruptures frais : Chaque trou = perte de CA immédiate. Traiter en urgence : stock + commande + SMP.",
+    "Ruptures meubles froids : Tour systématique de tous les meubles. Noter les références manquantes pour action.",
+    // Ruptures PLS - Variantes contextuelles
+    "Ruptures week-end : Avant le week-end, vérifier les stocks des meilleures ventes. Anticiper la demande.",
+    "Ruptures produits de saison : Les références saisonnières (salades été, raclette hiver) nécessitent des SMP adaptés.",
+    "Ruptures nouveautés : Les nouveaux produits frais connaissent souvent un succès initial. Ajuster SMP rapidement.",
+    // Ruptures PLS - Variantes fournisseur
+    "Ruptures fournisseur : Si problème livraison, proposer un produit alternatif au client. Limiter la perte de vente.",
+    "Ruptures approvisionnement : Vérifier les commandes passées. Si retard fournisseur, relancer ou trouver substitut.",
+    // Ruptures PLS - Variantes merchandising
+    "Ruptures et facing : En attendant la livraison, resserrer les facings voisins pour combler visuellement le trou.",
+    "Ruptures visibles : Les trous dans le frais sont très visibles. Traiter en priorité les références à forte rotation."
+  ],
+  pls_o3:[
+    // SMP PLS - Variantes génériques
+    "SMP : Vérifier que le Stock Mini Permanent est cohérent avec la rotation journalière. Relever les valeurs insuffisantes.",
+    "Mise à jour SMP : Minima à refléter la réalité de vente. Corriger si nécessaire.",
+    "SMP à contrôler : Vérifier l'adéquation du SMP avec la vitesse d'écoulement. Revaloriser les SMP trop bas.",
+    "Stock Mini Permanent : Le SMP pilote les commandes. Trop bas = ruptures, trop haut = surstock et casse.",
+    "SMP frais : Les produits frais ont des SMP délicats. Équilibre entre disponibilité et risque de péremption.",
+    "Contrôle SMP : Comparer ventes quotidiennes et SMP. Si vente quotidienne > SMP, augmenter le minimum.",
+    // SMP PLS - Variantes saisonnières
+    "SMP saison : Les besoins varient selon la période. Adapter les SMP aux saisons (salades été, soupes hiver).",
+    "SMP période chaude : Les produits frais se vendent plus en été. Revaloriser temporairement les SMP.",
+    // SMP PLS - Variantes DLC
+    "SMP et DLC : Produits à DLC très courte = SMP faible pour éviter la casse. Trouver le bon équilibre.",
+    "SMP vs casse : Un SMP trop élevé génère de la casse sur les produits frais. Analyser les pertes avant d'augmenter.",
+    // SMP PLS - Variantes promotions
+    "SMP promotions : Pendant une promo, multiplier le SMP par 2 ou 3 selon l'impact attendu. Sécuriser les stocks.",
+    "SMP opé commerciale : Après une promotion, revenir au SMP normal. Ne pas laisser le SMP gonflé."
+  ],
+  pls_c1:[
+    // Chambre froide & réserve - Variantes génériques
+    "Chambre froide & réserve : Dégager les allées, évacuer les emballages vides, produits bien identifiés.",
+    "Réserve PLS : Sortir les cartons vides, libérer les accès, vérifier l'organisation et la lisibilité.",
+    "Rangement réserve : Désencombrer la chambre froide, évacuer les emballages, allées libres.",
+    "Chambre froide : Cartons filmés identifiés, FIFO respecté, allées dégagées pour circulation.",
+    "Réserve frais : Produits rangés par famille et par DLC. Les plus anciennes dates devant pour sortir en premier.",
+    "Organisation réserve frais : Étiquetage clair, rotation FIFO, emballages évacués quotidiennement.",
+    // Chambre froide - Variantes hygiène
+    "Chambre froide hygiène : Nettoyer les sols, retirer les emballages souillés, vérifier l'absence de nuisibles.",
+    "Propreté chambre froide : Sol propre, pas de cartons au sol, produits sur palettes ou étagères.",
+    "Hygiène réserve frais : Évacuer immédiatement tout produit abîmé ou coulant. Nettoyer la zone touchée.",
+    // Chambre froide - Variantes sécurité
+    "Chambre froide sécurité : Issue de secours dégagée, température affichée et contrôlée, alarme fonctionnelle.",
+    "Sécurité réserve frais : Vérifier que la porte de la chambre froide se déverrouille de l'intérieur.",
+    // Chambre froide - Variantes température
+    "Chambre froide température : Vérifier le relevé de température quotidien. Signaler toute anomalie immédiatement.",
+    "Contrôle froid réserve : Température entre 0 et 4°C. Si dérive, alerter maintenance et surveiller les produits."
+  ],
+  pls_c2:[
+    // Meubles froids - Variantes génériques
+    "Meubles froids : Contrôler les températures (+4°C max frais / -18°C surgel.). Nettoyer vitrines, joints et étagères. Signaler toute anomalie.",
+    "Températures & nettoyage : Vérifier les relevés de chaque meuble, nettoyer les surfaces, noter tout écart dans le cahier.",
+    "Contrôle froid : Tour des températures, nettoyage des vitrines et joints, signalement immédiat si anomalie.",
+    "Meubles réfrigérés : Affichage température visible, vitrines propres, joints étanches, étagères nettoyées.",
+    "Tour du froid : Chaque meuble doit afficher sa température. Vérifier la conformité, nettoyer les surfaces.",
+    "Entretien meubles froids : Nettoyer les grilles d'aération, dépoussiérer les condensateurs, vérifier l'éclairage.",
+    // Meubles froids - Variantes température
+    "Températures meubles : Frais +4°C maximum, surgelés -18°C minimum. Noter les relevés dans le cahier d'hygiène.",
+    "Contrôle chaîne du froid : Si température anormale, vérifier les produits. Au-delà de +7°C, risque sanitaire.",
+    "Alarme froid : Si alarme déclenché, intervention immédiate. Sortir les produits si nécessaire.",
+    // Meubles froids - Variantes nettoyage
+    "Nettoyage vitrines : Vitrines sales donnent une mauvaise image. Nettoyer quotidiennement, intérieur et extérieur.",
+    "Propreté meubles : Retirer les produits renversés ou coulants immédiatement. Nettoyer avec produit adapté.",
+    "Joints meubles froids : Vérifier l'état des joints de portes. Joint abîmé = perte de froid = surconsommation.",
+    // Meubles froids - Variantes été
+    "Meubles froids été : Chaleur ambiante forte = meubles sollicités. Vérifier les températures plusieurs fois par jour.",
+    "Canicule et froid : En cas de forte chaleur, surveiller la température des meubles. Risque de dérive.",
+    // Meubles froids - Variantes merchandising
+    "Meubles et remplissage : Ne pas surcharger les meubles. L'air doit circuler pour maintenir le froid."
+  ],
+  pls_c3:[
+    // Linéaire frais - Variantes génériques
+    "Linéaire frais : Redresser les articles mal positionnés, contrôler les étagères, vérifier les étiquettes de prix.",
+    "Tenue étagères : Repositionner les produits déplacés, bon état des rayonnages, contrôler les prix.",
+    "Tour rayonnages : Vérifier l'alignement des produits, l'état des tablettes et la conformité des affichages de prix.",
+    "Linéaire meubles froids : Produits bien rangés, facings soignés, températures conformes, étiquettes visibles.",
+    "Présentation frais : Les produits frais doivent être parfaitement présentés. Impact direct sur la perception qualité.",
+    "Organisation linéaire frais : Respecter l'implantation, FIFO sur le linéaire, produits récents derrière.",
+    // Linéaire frais - Variantes propreté
+    "Propreté linéaire frais : Retirer immédiatement les produits coulants ou abîmés. Nettoyer la zone.",
+    "Nettoyage étagères frais : Les traces de produits renversés attirent l'œil négativement. Nettoyer régulièrement.",
+    // Linéaire frais - Variantes prix
+    "Prix linéaire frais : Vérifier que chaque étiquette correspond au produit. Erreur de prix = perte de confiance.",
+    "Étiquettes frais : Prix à jour, lisibles, bien positionnées. Chaque produit doit avoir son étiquette visible.",
+    // Linéaire frais - Variantes merchandising
+    "Facing frais : Les produits proches DLC devant pour rotation naturelle. DLC longues derrière.",
+    "Linéaire attractif : Produits bien alignés, facings pleins, vitrines propres = rayon qui donne envie.",
+    "Mise en rayon frais : Remplir régulièrement les meubles. Un meuble vide en fin de journée = ventes perdues."
+  ],
+  pft_tb:[
+    // Traçabilité - Variantes génériques
+    "Traçabilité & origine : Vérifier lot, date de réception et origine sur chaque produit en vitrine. Contrôler l'affichage réglementaire.",
+    "Contrôle traçabilité : Fiche complète (lot, réception, origine) pour chaque article. Affichage de l'origine conforme.",
+    "Traçabilité obligatoire : Lot, date et origine documentés sur chaque produit. Vérifier l'étiquetage vitrine.",
+    "Fiche traçabilité : Chaque produit transformé maison doit avoir sa fiche complète et à jour.",
+    "Lot et origine : L'affichage de l'origine est obligatoire. Vérifier que chaque produit a son étiquette visible.",
+    "Traçabilité produits : En cas de rappel, le lot doit être identifiable immédiatement. Tenir les fiches à jour.",
+    // Traçabilité - Variantes réception
+    "Traçabilité livraison : À chaque réception, enregistrer le lot, la date, l'origine. Archiver les bons de livraison.",
+    "Réception et traçabilité : Noter le numéro de lot fournisseur sur la fiche de réception. Conservation 3 mois minimum.",
+    // Traçabilité - Variantes transformation
+    "Traçabilité fabrication maison : Chaque préparation doit avoir : date, heure, opérateur, matières premières utilisées.",
+    "Produits transformés : Fiche de fabrication obligatoire. DLC calculée, lot matières premières tracé.",
+    // Traçabilité - Variantes affichage
+    "Affichage origine : L'origine géographique doit être visible du client. Panneau lisible devant chaque produit.",
+    "Étiquetage vitrine : Origine + prix + appellation. Contrôler que rien ne manque.",
+    // Traçabilité - Variantes contrôle
+    "Audit traçabilité : Simuler un rappel produit. Vérifier qu'on peut retrouver tous les lots en moins de 4 heures.",
+    "Contrôle fiches : Vérifier aléatoirement quelques fiches. Complètes, lisibles, datées, signées."
+  ],
+  pft_fl:[
+    // Origine F&L - Variantes génériques
+    "Origine & traçabilité : Vérifier l'affichage de l'origine sur chaque produit. Retirer tout article sans fiche conforme.",
+    "Fiches origine : Chaque référence affiche son origine complète. Écarter les produits sans traçabilité. Fraîcheur de l'étalage.",
+    "Contrôle origine : Étiquettes d'origine à jour et lisibles, fiches traçabilité présentes, fraîcheur visuelle de l'étalage.",
+    "Origine géographique : Affichage obligatoire pour fruits et légumes. Pays minimum, région si France.",
+    "Étiquetage F&L : Origine + variété + prix + catégorie. Panneau visible devant chaque produit.",
+    "Traçabilité F&L : Conserver les bons de livraison. En cas de problème sanitaire, origine traçable.",
+    // Origine F&L - Variantes fraîcheur
+    "Fraîcheur et origine : Retirer les produits flétris même si l'origine est affichée. Fraîcheur = priorité.",
+    "Contrôle qualité F&L : Origine correcte + produit frais et beau. Les deux critères sont indissociables.",
+    // Origine F&L - Variantes local/saison
+    "Origine locale : Mettre en avant les produits locaux et de saison. Panneau 'Origine France' visible.",
+    "Produits de saison : Vérifier l'origine des produits saisonniers. Valoriser le local quand disponible."
+  ],
+  pft_bo:[
+    // Allergènes - Variantes génériques
+    "Allergènes & DLC : Vérifier que les 14 allergènes sont affichés lisiblement pour chaque produit maison. Retirer les articles périmés.",
+    "Contrôle allergènes : Affichage complet et à jour. DLC vérifiées, produits périmés retirés sans exception.",
+    "Étiquetage allergènes : Chaque préparation maison doit afficher les 14 allergènes réglementaires. Contrôle DLC simultané.",
+    "14 allergènes : Gluten, crustacés, œufs, poissons, arachides, soja, lait, fruits à coque, céleri, moutarde, sésame, sulfites, lupin, mollusques.",
+    "Affichage allergènes : Étiquette visible, lisible, complète. Mise à jour à chaque changement de recette.",
+    "Allergènes produits maison : Obligation légale. Contrôler que TOUS les produits fabriqués sont étiquetés.",
+    // Allergènes - Variantes contamination
+    "Allergènes et contamination croisée : Nettoyer le plan de travail entre deux préparations contenant allergènes différents.",
+    "Prévention contamination : Ustensiles dédiés pour produits avec allergènes majeurs (fruits à coque, gluten).",
+    // Allergènes - Variantes formation
+    "Formation allergènes : L'équipe doit connaître les 14 allergènes. Pouvoir répondre aux questions clients.",
+    "Allergènes clients : En cas de question client sur allergènes, toujours vérifier l'étiquette. Ne jamais répondre de mémoire."
+  ],
+  pft_dl:[
+    // DLC PFT - Variantes génériques
+    "DLC & qualité : Vérifier les dates en vitrine et réserve. Retirer tout article périmé ou présentant un défaut d'aspect.",
+    "Tour DLC frais : Inspecter vitrine et réserve, écarter les produits arrivés à date ou abîmés, contrôler les conditionnements.",
+    "Contrôle qualité & DLC : Parcourir l'intégralité des produits frais, retirer les hors-date et articles en mauvais état.",
+    "DLC produits frais : Contrôle rigoureux quotidien. Retirer à J-1 pour les DLC très courtes.",
+    "DLC et aspect : Un produit peut être dans les dates mais non vendable. Aspect visuel = critère de retrait.",
+    "Tour fraîcheur PFT : DLC + contrôle visuel + contrôle olfactif si doute. Aucun compromis sur la qualité.",
+    // DLC PFT - Variantes fabrication maison
+    "DLC fabrication maison : Calculer correctement la DLC selon la matière première la plus courte utilisée.",
+    "Produits transformés : DLC = date de fabrication + durée de vie définie. Ne jamais dépasser.",
+    // DLC PFT - Variantes température
+    "DLC et chaîne du froid : Si rupture de froid constatée, réduire la DLC ou retirer les produits concernés."
+  ],
+  pft_o2:[
+    // Ruptures PFT - Variantes génériques
+    "Ruptures : Pour chaque emplacement vide — corriger le stock, 1 carton commande client pour relancer l'automatique.",
+    "Chasse aux ruptures : Repérer les trous, corriger les stocks, commander 1 carton pour réamorcer les commandes automatiques.",
+    "Tour des ruptures : Identifier les absences, corriger les stocks négatifs, relancer via 1 carton commande client.",
+    "Ruptures PFT : Les produits frais en rupture = client déçu immédiatement. Traiter en priorité absolue.",
+    "Gestion ruptures frais : Anticiper les besoins, sécuriser les commandes, ajuster les stocks en temps réel.",
+    // Ruptures PFT - Variantes alternatives
+    "Ruptures et substitution : Si produit phare en rupture, proposer activement une alternative au client.",
+    "Ruptures conseil : Former l'équipe à proposer des substituts quand rupture. Limiter la perte de vente."
+  ],
+  pft_o3:[
+    // SMP PFT - Variantes génériques
+    "SMP & marge : Vérifier les SMP des ruptures traitées, corriger les valeurs insuffisantes. Contrôler les coûts d'achat.",
+    "Mise à jour SMP : Minima à la hauteur de la rotation. Vérifier le prix d'achat pour la marge.",
+    "SMP & coût d'achat : Revaloriser les SMP trop bas, contrôler les tarifs des dernières livraisons pour la marge.",
+    "SMP produits frais : Équilibre délicat entre disponibilité et risque de casse. Analyser les pertes.",
+    "SMP et DLC : Produits à DLC courte = SMP modéré pour éviter la perte. Ajuster finement.",
+    // SMP PFT - Variantes marge
+    "SMP et rentabilité : Un SMP trop élevé génère de la casse = perte de marge. Optimiser.",
+    "Marge PFT : Contrôler les prix d'achat régulièrement. Renégocier si dérive constatée."
+  ],
+  pft_c1:[
+    // Meubles froids PFT - Variantes génériques
+    "Meubles froids : Relever les températures, nettoyer vitrines, joints et bacs. Consigner toute anomalie dans le cahier d'hygiène.",
+    "Contrôle froid & nettoyage : Vérifier les températures, nettoyer les surfaces, signaler tout écart.",
+    "Températures & hygiène : Tour des relevés de froid, nettoyage complet, traçabilité dans le cahier.",
+    "Vitrines réfrigérées : Température conforme (+2 à +4°C), vitrines propres intérieur/extérieur, éclairage fonctionnel.",
+    "Meubles froids PFT : Nettoyer quotidiennement, désinfecter hebdomadairement, noter dans le cahier d'hygiène.",
+    "Contrôle chaîne du froid : Relever et noter les températures matin et soir. Traçabilité obligatoire.",
+    // Meubles froids PFT - Variantes température
+    "Températures vitrines : Entre +2°C et +4°C pour les produits frais. Au-delà, risque sanitaire.",
+    "Alarme température : Si alarme, intervention immédiate. Vérifier les produits, ajuster ou appeler maintenance.",
+    "Froid et traçabilité : Chaque relevé de température dans le cahier. Signature de l'opérateur.",
+    // Meubles froids PFT - Variantes nettoyage
+    "Nettoyage vitrines PFT : Produit désinfectant adapté contact alimentaire. Rincer, sécher.",
+    "Hygiène meubles : Retirer immédiatement tout produit coulant. Nettoyer et désinfecter la zone.",
+    "Joints vitrines : Vérifier l'état des joints. Joint abîmé = perte de froid + contamination possible."
+  ],
+  pft_c2:[
+    // Réserve PFT - Variantes génériques
+    "Réserve & chambre froide : Évacuer déchets et emballages de découpe, dégager les allées et sorties de secours.",
+    "Rangement réserve : Sortir les emballages usagés, libérer les accès, issues de secours dégagées.",
+    "Chambre froide : Évacuer les déchets, désencombrer les allées, accès libres et sécurisés.",
+    "Réserve PFT : Déchets de découpe évacués quotidiennement, sol propre, température contrôlée.",
+    "Chambre froide hygiène : Pas de cartons au sol, produits sur palettes, rotation FIFO stricte.",
+    "Organisation réserve frais : Matières premières identifiées, datées, rangées par famille.",
+    // Réserve PFT - Variantes hygiène
+    "Hygiène réserve : Nettoyer les sols après chaque découpe. Désinfecter les zones souillées.",
+    "Réserve propreté : Aucun déchet au sol, poubelles fermées, température conforme, ventilation efficace.",
+    // Réserve PFT - Variantes sécurité
+    "Sécurité chambre froide : Issue de secours dégagée, système d'alarme testé, température affichée.",
+    "Réserve et circulation : Allées suffisamment larges pour chariots, sols non glissants, éclairage correct."
+  ],
+  pft_c3:[
+    // Plans de travail PFT - Variantes génériques
+    "Plans de travail : Désinfecter plans, planches et ustensiles. Nettoyer le sol de la zone PFT. Consigner dans le cahier.",
+    "Nettoyage zone PFT : Désinfecter les surfaces et outils, nettoyer le sol, traçabilité dans le cahier.",
+    "Hygiène zone de production : Désinfecter après chaque usage, nettoyer le sol, renseigner le cahier d'hygiène.",
+    "Plans de travail : Nettoyer entre chaque produit, désinfecter en fin de production, noter dans le cahier.",
+    "Désinfection plans : Produit adapté contact alimentaire, temps de contact respecté, rinçage, séchage.",
+    "Hygiène production : Plans, planches, couteaux, balances = nettoyage et désinfection systématiques.",
+    // Plans de travail PFT - Variantes ustensiles
+    "Ustensiles : Planches par code couleur respecté (rouge=viande, vert=légumes, blanc=volaille, bleu=poisson).",
+    "Couteaux et outils : Nettoyer et désinfecter après chaque usage. Rangement en zone propre.",
+    "Code couleur : Respecter strictement les planches par famille de produits. Éviter contaminations croisées.",
+    // Plans de travail PFT - Variantes traçabilité
+    "Cahier d'hygiène : Noter chaque nettoyage/désinfection. Heure, opérateur, produit utilisé.",
+    "Traçabilité nettoyage : Le cahier prouve que les protocoles sont appliqués. À jour quotidiennement.",
+    // Plans de travail PFT - Variantes contamination
+    "Contamination croisée : Ne jamais couper produit cru et produit cuit sur même planche sans nettoyage intermédiaire.",
+    "Hygiène et séparation : Produits allergènes sur ustensiles dédiés. Nettoyer entre chaque usage."
+  ],
+  na_o1:[
+    // Facing NA - Variantes génériques
+    "Facing & rangement : Remettre chaque article à sa place, facing face-client sur toutes les étagères, vérifier les étiquettes de prix.",
+    "Tenue du rayon : Replacer les articles selon le plan, facing complet, chaque référence correctement balisée.",
+    "Rangement & facing : Remettre en ordre l'ensemble du rayon, facing soigné, contrôle des prix et du balisage.",
+    "Facing complet : Chaque produit face-client, bien aligné, étiquette de prix visible et correcte.",
+    "Organisation rayon : Produits à leur emplacement, facing soigné, prix conformes, aucun article au sol.",
+    "Facing non alimentaire : Les clients déplacent beaucoup. Remettre en ordre plusieurs fois par jour.",
+    "Présentation rayon : Ordre, propreté, facing = attractivité. Impact direct sur les ventes.",
+    // Facing NA - Variantes merchandising
+    "Facing et plan : Respecter le plan merchandising. Chaque produit a un emplacement défini, ne pas improviser.",
+    "Implantation respectée : Les études merchandising optimisent les ventes. Appliquer strictement le plan.",
+    // Facing NA - Variantes promotions
+    "Facing promotions : Produits en promo = facing renforcé + mise en avant. Maximiser la visibilité.",
+    "Opérations commerciales : Respecter les théâtralisations prévues. TG, îlots, displays installés correctement."
+  ],
+  na_o2:[
+    // Ruptures NA - Variantes génériques
+    "Ruptures : Pour chaque manquant — corriger le stock si erroné, 1 carton commande client pour relancer l'automatique, ajuster le SMP.",
+    "Chasse aux ruptures : Repérer les trous, corriger les stocks, passer 1 carton commande client, revoir les SMP.",
+    "Tour des ruptures : Identifier les absences, corriger le stock, relancer via 1 carton commande client, vérifier le SMP.",
+    "Ruptures non alimentaire : Chaque trou = vente perdue. Traiter systématiquement stock + commande + SMP.",
+    "Gestion ruptures : Parcourir le rayon, noter les références manquantes, corriger les stocks, relancer les commandes.",
+    // Ruptures NA - Variantes saisonnalité
+    "Ruptures produits saisonniers : Jouets Noël, jardin printemps, rentrée scolaire = anticiper les besoins.",
+    "Ruptures saison : Adapter les SMP à la saisonnalité forte du non alimentaire.",
+    // Ruptures NA - Variantes alternatives
+    "Ruptures et conseil : Former l'équipe à proposer des alternatives quand produit en rupture.",
+    "Substitution ruptures : Si modèle exact manquant, proposer référence similaire au client."
+  ],
+  na_o3:[
+    // SMP NA - Variantes génériques
+    "SMP : Vérifier que le Stock Mini Permanent reflète la vitesse de vente. Corriger les valeurs à 0 ou insuffisantes.",
+    "Mise à jour SMP : Minima à garantir le réapprovisionnement automatique. Corriger si nécessaire.",
+    "SMP à revoir : Contrôler et ajuster le SMP pour éviter que les ruptures se reproduisent.",
+    "Stock Mini Permanent : SMP trop bas = ruptures répétées. Analyser les ventes et ajuster.",
+    "SMP et rotation : Comparer ventes quotidiennes au SMP. Si vente > SMP régulièrement, augmenter.",
+    // SMP NA - Variantes saisonnalité
+    "SMP saisonniers : Non alimentaire très saisonnier. Adapter les SMP selon les périodes (Noël, rentrée, été).",
+    "SMP période forte : Rentrée scolaire, fêtes = multiplier les SMP temporairement."
+  ],
+  na_c1:[
+    // Réserve NA - Variantes génériques
+    "Réserve : Évacuer cartons vides et emballages, dégager les allées et sorties de secours, vérifier l'état du mobilier.",
+    "Rangement réserve : Sortir les emballages inutiles, libérer les accès, contrôler le mobilier de stockage.",
+    "Réserve : Désencombrer, évacuer les déchets, s'assurer que les issues restent libres.",
+    "Réserve non alimentaire : Cartons au compacteur, palettes évacuées, allées dégagées.",
+    "Organisation réserve : Produits rangés par famille, accessibles facilement, rotations FIFO appliquée.",
+    // Réserve NA - Variantes sécurité
+    "Réserve sécurité : Issues de secours jamais bloquées. Vérifier quotidiennement.",
+    "Sécurité stockage : Produits lourds en bas, palettes stables, hauteur maximale respectée."
+  ],
+  na_c2:[
+    // Linéaire NA - Variantes génériques
+    "Linéaire : Contrôler l'état de chaque étagère, redresser les articles déplacés, vérifier la stabilité des tablettes.",
+    "Tour des rayonnages : Repositionner les articles tombés ou mal alignés, vérifier la solidité des étagères.",
+    "Vérification étagères : Redresser ce qui est renversé, contrôler les tablettes et signaler toute dégradation.",
+    "Contrôle linéaire : Articles bien rangés, étagères propres, fixations solides, rien qui dépasse.",
+    "État rayonnages : Vérifier la stabilité, signaler étagères endommagées, produits bien calés.",
+    // Linéaire NA - Variantes sécurité
+    "Linéaire sécurité : Produits lourds en bas, risques de chute éliminés, allées dégagées.",
+    "Sécurité client : Aucun produit en déséquilibre, hauteurs accessibles, allées libres."
+  ],
+  na_c3:[
+    // Propreté NA - Variantes génériques
+    "Tenue visuelle : Dépoussiérer les étagères et articles exposés, soigner les têtes de gondole, allées propres.",
+    "Propreté rayon : Dépoussiérer, soigner la mise en scène des têtes de gondole, vérifier la propreté des allées.",
+    "Présentation : Dépoussiérer l'ensemble, mettre en valeur les têtes de gondole, maintenir les allées libres et propres.",
+    "Propreté non alimentaire : Poussière très visible sur bazar/textile. Dépoussiérer régulièrement.",
+    "Tenue visuelle rayon : Produits propres, étagères dépoussiérées, sols propres = image qualité.",
+    // Propreté NA - Variantes merchandising
+    "Têtes de gondole : Soigner particulièrement les TG, très visibles, impact fort sur les ventes.",
+    "Mise en scène : TG et îlots doivent être impeccables. Théâtralisation soignée = attractivité."
+  ]
 };
 
 // Référence (premier variant) — utilisée dans le modal edit
@@ -646,7 +1286,41 @@ function fmtC(s){
   return s;
 }
 
-function getCons(k){
+async function getCons(k){
+  // Si mode IA activé, essayer de récupérer les consignes IA
+  if(MODE_IA && !SHOT){
+    // Vérifier le cache
+    if(CONSIGNES_IA_CACHE[k]){
+      console.log('[IA] Consignes récupérées depuis le cache pour rayon',k);
+      return CONSIGNES_IA_CACHE[k];
+    }
+    
+    // Générer via IA si pas en cache
+    if(!GENERATION_EN_COURS){
+      GENERATION_EN_COURS = true;
+      var consignesIA = await genererConsignesIA(k);
+      GENERATION_EN_COURS = false;
+      
+      if(consignesIA){
+        // Succès IA : stocker dans le cache et retourner
+        var resultat = {
+          op: consignesIA.operationnelles,
+          cl: consignesIA.proprete
+        };
+        CONSIGNES_IA_CACHE[k] = resultat;
+        document.getElementById('ia-status').textContent = '● En ligne';
+        document.getElementById('ia-status').style.color = '#059669';
+        return resultat;
+      } else {
+        // Échec IA : fallback sur statique
+        console.log('[IA] Fallback vers consignes statiques');
+        document.getElementById('ia-status').textContent = '● Hors ligne - Mode statique';
+        document.getElementById('ia-status').style.color = '#ea580c';
+      }
+    }
+  }
+  
+  // Mode statique (fallback ou mode IA désactivé)
   var t=META[k]?META[k].t:'na'; var op=[],cl=[];
   if(t==='pgc'){op=[lC('pgc_o1'),lC('pgc_o2'),lC('pgc_o3')];cl=[lC('pgc_c1'),lC('pgc_c2'),lC('pgc_c3')];}
   else if(t==='pls'){op=[lC('pls_o1'),lC('pls_o2'),lC('pls_o3')];cl=[lC('pls_c1'),lC('pls_c2'),lC('pls_c3')];}
@@ -703,14 +1377,14 @@ function onSel(){
 
 function sg(v){return v>=0?'up':'dn';}
 
-function genBrief(){
+async function genBrief(){
   var k=document.getElementById('sel').value;
   if(!k){alert('Veuillez choisir un rayon.');return;}
   rayonK=k;
   var m=META[k], d=D[k]||{};
 
-  // Lire consignes AVANT reset (SHOT temporaire)
-  var c=getCons(k);
+  // Lire consignes AVANT reset (SHOT temporaire) - AWAIT car getCons est async
+  var c=await getCons(k);
   SHOT=null; // réinitialisation après usage (one-shot)
   majBtnEdit();
 
@@ -778,6 +1452,11 @@ function genBrief(){
   document.getElementById('brief').style.display='block';
   document.getElementById('brief').scrollIntoView({behavior:'smooth',block:'start'});
   verifierCorrespondanceRayon(); // re-vérifier après génération
+  
+  // Activer le bouton régénérer si mode IA activé
+  if(MODE_IA){
+    document.getElementById('btn-regen').disabled=false;
+  }
 }
 
 // ═══════════════════════════════════════════════════
