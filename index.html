@@ -1101,115 +1101,36 @@ function getCons(k){
 }
 
 // ═══════════════════════════════════════════════════
-// MESSAGES DE CLÔTURE — Méthode Sandwich (Positif → Vigilance → Conclusion)
+// MESSAGES DE CLÔTURE
 // ═══════════════════════════════════════════════════
-
-// 1. POSITIFS TERRAIN (variantes par métier)
-var MSG_POSITIF_PGC=[
-  "Le rayon est resté propre et bien rempli malgré l'activité, merci pour la réactivité de l'équipe.",
-  "Le facing a été bien tenu aujourd'hui, les produits sont visibles et accessibles.",
-  "La rotation des DLC est bien appliquée, les produits les plus anciens sont devant.",
-  "Le linéaire est bien organisé, les prix sont clairs et les références faciles à trouver.",
-  "La réserve est rangée et les allées dégagées, cela facilite le travail de toute l'équipe.",
-  "Les produits sont bien alignés et le rayon donne une impression de professionnalisme.",
-  "Le suivi des stocks permet de limiter les ruptures, continuez dans cette voie."
+var MSG_POS=[
+  {t:"Bonne journée à toute l'équipe !",s:"Un rayon bien tenu, c'est la première impression que le client retient. Merci pour votre implication."},
+  {t:"Merci pour votre engagement !",s:"Chaque geste quotidien construit la satisfaction client. L'équipe fait la différence."},
+  {t:"En route pour une belle journée !",s:"La rigueur d'aujourd'hui prépare les résultats de demain. Comptez sur vous."},
+  {t:"L'équipe fait la force du rayon !",s:"Un bon brief, c'est une journée qui se déroule sans accroc. Bonne continuation à tous."},
+  {t:"Chaque détail compte !",s:"Un produit bien placé, un client satisfait. Votre travail a un impact direct sur le résultat du magasin."},
+  {t:"Cap sur une journée productive !",s:"Les indicateurs guident, votre terrain fait la différence. Bonne journée à toutes et tous."}
 ];
-
-var MSG_POSITIF_PLS=[
-  "Les meubles froids sont propres et les températures sont conformes, c'est un point fort.",
-  "La fraîcheur des produits est bien visible, cela rassure les clients.",
-  "La rotation est respectée, les DLC courtes sont bien gérées par l'équipe.",
-  "Le linéaire frais reste attractif même en fin de journée, merci pour la vigilance.",
-  "La chambre froide est bien organisée, les produits sont identifiés et accessibles.",
-  "Les contrôles de température sont à jour dans le cahier, continuez ce suivi rigoureux."
+var MSG_NEG=[
+  {t:"Point d'amélioration :",s:"Les stocks négatifs sont à corriger en priorité pour fiabiliser les commandes automatiques."},
+  {t:"Point d'amélioration :",s:"Les ruptures catalogue pénalisent le CA — chasse aux trous et commande 1 carton pour chaque référence manquante."},
+  {t:"Point d'amélioration :",s:"Le chiffre d'affaires est en recul — renforcer le facing et la disponibilité produit pour limiter la perte."},
+  {t:"Point d'amélioration :",s:"La marge est sous pression — contrôler les prix d'achat et limiter les démarques non justifiées."},
+  {t:"Point d'amélioration :",s:"L'écart au budget persiste — chaque vente compte pour rattraper le retard."}
 ];
-
-var MSG_POSITIF_PFT=[
-  "La traçabilité est à jour et les fiches sont complètes, c'est essentiel.",
-  "Les produits en vitrine sont frais et bien présentés, cela attire l'œil.",
-  "L'affichage des origines est clair et conforme, les clients apprécient cette transparence.",
-  "Le respect des températures et de l'hygiène est visible, continuez ainsi.",
-  "Les plans de travail sont propres et le cahier d'hygiène est tenu à jour.",
-  "La qualité des produits proposés reflète le professionnalisme de l'équipe."
-];
-
-var MSG_POSITIF_NA=[
-  "Le rayon est bien rangé et les produits sont faciles à trouver pour les clients.",
-  "Le facing est soigné et les têtes de gondole attirent l'attention.",
-  "La présentation générale du rayon donne une impression de professionnalisme.",
-  "Les produits sont bien mis en valeur et les promotions sont visibles.",
-  "La réserve est organisée et les allées permettent une circulation fluide.",
-  "L'équipe maintient le rayon en bon état tout au long de la journée."
-];
-
-// 2. POINTS DE VIGILANCE (contextuels selon indicateurs)
-var MSG_VIGILANCE={
-  ruptures_critiques:"Attention aujourd'hui aux ruptures catalogue : plus de 50 références manquantes pénalisent les ventes.",
-  ruptures:"Vigilance sur les ruptures catalogue : corriger les stocks et relancer les commandes pour sécuriser la disponibilité.",
-  stocks_negatifs_critiques:"Priorité absolue aux stocks négatifs : plus de 20 références à corriger pour fiabiliser les commandes automatiques.",
-  stocks_negatifs:"Point de vigilance sur les stocks négatifs : les corriger rapidement pour éviter les ruptures.",
-  ca_baisse:"Attention à la baisse du CA : renforcer la disponibilité produit et le facing pour limiter la perte.",
-  marge_baisse:"Vigilance sur la marge : contrôler les prix d'achat et limiter les démarques non justifiées.",
-  budget_ecart:"Point d'attention sur l'écart au budget : chaque vente compte pour rattraper le retard.",
-  multi:"Vigilance renforcée aujourd'hui : ruptures et stocks négatifs à traiter en priorité pour sécuriser les ventes.",
-  ras:"Continuez ce niveau d'exigence pour maintenir la performance du rayon."
-};
-
-// 3. CONCLUSIONS MOTIVANTES (orientées client/résultat)
-var MSG_CONCLUSION=[
-  "Un rayon disponible et bien tenu donne envie d'acheter : chaque détail compte pour le client.",
-  "La disponibilité produit et la présentation influencent directement les ventes du rayon.",
-  "Un client qui trouve ce qu'il cherche dans un rayon propre et ordonné, c'est un client satisfait.",
-  "Le professionnalisme visible au quotidien construit la confiance des clients.",
-  "Chaque produit disponible et bien présenté est une opportunité de vente.",
-  "La qualité du rayon reflète l'engagement de l'équipe et impacte directement les résultats.",
-  "Un rayon bien géré aujourd'hui, ce sont les ventes de demain assurées.",
-  "Le soin apporté au rayon se traduit en satisfaction client et en performance."
-];
-
-function buildClosing(d, type){
-  // 1. Choisir message positif selon le métier
-  var positifs = type==='pgc'?MSG_POSITIF_PGC:
-                 type==='pls'?MSG_POSITIF_PLS:
-                 type==='pft'?MSG_POSITIF_PFT:
-                 MSG_POSITIF_NA;
-  var positif = rnd(positifs);
-  
-  // 2. Déterminer le point de vigilance selon les indicateurs
-  var vigilance;
-  var nbProblemes = 0;
-  if(d.rupt>50) nbProblemes++;
-  if(d.stk>20) nbProblemes++;
-  if(d.ev<-10) nbProblemes++;
-  if(d.dm<-3) nbProblemes++;
-  
-  if(nbProblemes>=2){
-    vigilance=MSG_VIGILANCE.multi;
-  } else if(d.rupt>50){
-    vigilance=MSG_VIGILANCE.ruptures_critiques;
-  } else if(d.rupt>0){
-    vigilance=MSG_VIGILANCE.ruptures;
-  } else if(d.stk>20){
-    vigilance=MSG_VIGILANCE.stocks_negatifs_critiques;
-  } else if(d.stk>0){
-    vigilance=MSG_VIGILANCE.stocks_negatifs;
-  } else if(d.ev<-10){
-    vigilance=MSG_VIGILANCE.ca_baisse;
-  } else if(d.dm<-3){
-    vigilance=MSG_VIGILANCE.marge_baisse;
-  } else if(d.bud<-2){
-    vigilance=MSG_VIGILANCE.budget_ecart;
-  } else {
-    vigilance=MSG_VIGILANCE.ras;
-  }
-  
-  // 3. Conclusion motivante aléatoire
-  var conclusion = rnd(MSG_CONCLUSION);
-  
-  // Construire le HTML (3 blocs distincts, méthode sandwich)
-  return '<div class="closing" style="background:linear-gradient(135deg,#16a34a,#059669)"><div class="cl-ico">👍</div><div><div class="cl-t">Point positif</div><div class="cl-s">'+positif+'</div></div></div>'+
-    '<div class="closing" style="background:linear-gradient(135deg,#ea580c,#c2410c)"><div class="cl-ico">⚡</div><div><div class="cl-t">Vigilance du jour</div><div class="cl-s">'+vigilance+'</div></div></div>'+
-    '<div class="closing" style="background:linear-gradient(135deg,var(--blue),var(--lblue))"><div class="cl-ico">🎯</div><div><div class="cl-t">Impact terrain</div><div class="cl-s">'+conclusion+'</div></div></div>';
+function buildClosing(d){
+  var pos=rnd(MSG_POS);
+  var neg=null;
+  if(d.stk>20) neg=MSG_NEG[0];
+  else if(d.rupt>50) neg=MSG_NEG[1];
+  else if(d.ev<-10) neg=MSG_NEG[2];
+  else if(d.dm<-2) neg=MSG_NEG[3];
+  else if(d.bud<-3) neg=MSG_NEG[4];
+  if(!neg) return '<div class="closing"><div class="cl-ico">🌟</div><div><div class="cl-t">'+pos.t+'</div><div class="cl-s">'+pos.s+'</div></div></div>';
+  var pos2=rnd(MSG_POS.filter(function(p){return p.t!==pos.t;}));
+  return '<div class="closing"><div class="cl-ico">💪</div><div><div class="cl-t">'+pos.t+'</div><div class="cl-s">'+pos.s+'</div></div></div>'+
+    '<div class="card full" style="margin-bottom:12px;border-left:4px solid var(--orange)"><div class="ch al">⚡ '+neg.t+'</div><div style="padding:10px 14px;font-size:13px">'+neg.s+'</div></div>'+
+    '<div class="closing"><div class="cl-ico">🎯</div><div><div class="cl-t">'+pos2.t+'</div><div class="cl-s">'+pos2.s+'</div></div></div>';
 }
 
 // ═══════════════════════════════════════════════════
@@ -1293,7 +1214,7 @@ function genBrief(){
       '<div class="card"><div class="ch cl">🧹 Propreté & Tenue du Rayon</div><div class="clist">'+clH+'</div></div>'+
     '</div>'+
     '<div id="reg-s" style="display:none"></div>'+
-    buildClosing(d, m.t)+
+    buildClosing(d)+
     '<div class="bfoot">Brief généré — HF7152 Narbonne — '+(DATE_STR||new Date().toLocaleDateString('fr-FR'))+' — Confidentiel Carrefour</div>';
 
   document.getElementById('brief-c').innerHTML=h;
