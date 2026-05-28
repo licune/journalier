@@ -319,16 +319,41 @@ function parserPerf(txt){
 
   txt.split('\n').forEach(function(ligne){
     ligne=ligne.trim(); if(!ligne) return;
-    var numM=ligne.match(/^(10|11|12|14|19|20|21|22|23|24|25|30|31|32|33|34|35|40|41|42|43|44|45|60|61|62|63|64|65|66|67|8X)\s/i);
+    // (?:^|\s) au lieu de ^ : accepte les lignes avec préfixes navigation
+    var numM=ligne.match(/(?:^|\s)(10|11|12|14|19|20|21|22|23|24|25|30|31|32|33|34|35|40|41|42|43|44|45|60|61|62|63|64|65|66|67|8X)\s/i);
     if(!numM) return;
     var num=numM[1].toUpperCase();
     if(!D[num]||!NOM_PG[num]) return;
     if(ligne.toUpperCase().indexOf(NOM_PG[num])===-1) return;
 
     var ns=getNums(ligne);
+    var d=D[num];
+
+    // Rayon 67 (Bijouterie) : structure réduite dans le PDF Performances
+    // La ligne contient moins de 8 colonnes numériques → seuil adapté
+    if(num==='67'){
+      if(ns.length<4) return; // minimum absolu : num + CA + évol + au moins 1 autre
+      d.ca  = ns[1]||0;
+      d.ev  = ns[2]||0;
+      d.bud = ns[3]||0;
+      // Taux de marge : première valeur décimale plausible (entre 0 et 100)
+      // dans les positions restantes - ne pas prendre ns[4] si c'est le rang
+      d.taux = 0;
+      for(var ti=4; ti<ns.length; ti++){
+        var tv=ns[ti];
+        // Valeur décimale (non entière) entre 0 et 100 = taux de marge probable
+        if(tv>0 && tv<100 && tv!==Math.round(tv)){
+          d.taux=tv; break;
+        }
+      }
+      d.stk=0; d.rupt=0; // indisponibles sur cette structure
+      console.log('[parserPerf] Rayon 67 extrait (structure réduite '+ns.length+' valeurs)');
+      return;
+    }
+
+    // Tous les autres rayons : structure standard 8+ colonnes
     if(ns.length<8) return;
 
-    var d=D[num];
     d.ca=ns[1]; d.ev=ns[2]; d.bud=ns[3]; d.taux=ns[6]; d.dm=ns[7];
 
     var trail=[];
@@ -341,45 +366,6 @@ function parserPerf(txt){
     else if(trail.length===1){ d.rupt=trail[0]; d.stk=0; }
     else { d.stk=0; d.rupt=0; }
   });
-
-  // Second passage : rayons dont ca=0 après passage normal
-  // Cause identifiée : lirePDF découpe certaines lignes (Y>4px entre colonnes)
-  // Stratégie : fusionner des paires/triplets de lignes consécutives et retenter
-  var rayons_manquants=Object.keys(D).filter(function(k){
-    return D[k].ca===0 && NOM_PG[k];
-  });
-
-  if(rayons_manquants.length>0){
-    var lignes=txt.split('\n');
-    for(var i=0;i<lignes.length-2;i++){
-      var l0=lignes[i].trim(), l1=lignes[i+1].trim(), l2=lignes[i+2].trim();
-      if(!l0) continue;
-      var numM=l0.match(/^(10|11|12|14|19|20|21|22|23|24|25|30|31|32|33|34|35|40|41|42|43|44|45|60|61|62|63|64|65|66|67|8X)\s/i);
-      if(!numM) continue;
-      var num=numM[1].toUpperCase();
-      if(rayons_manquants.indexOf(num)===-1) continue; // ne traiter que les manquants
-      if(l0.toUpperCase().indexOf(NOM_PG[num])===-1) continue;
-
-      // Fusionner jusqu'à 3 lignes consécutives pour reconstituer la ligne complète
-      var fusions=[l0+' '+l1, l0+' '+l1+' '+l2];
-      for(var fi=0;fi<fusions.length;fi++){
-        var ns=getNums(fusions[fi]);
-        if(ns.length<8) continue;
-        var d=D[num];
-        d.ca=ns[1]; d.ev=ns[2]; d.bud=ns[3]; d.taux=ns[6]; d.dm=ns[7];
-        var trail=[];
-        for(var j=2;j<ns.length;j++){
-          var v=ns[j];
-          if(v===Math.round(v)&&v>=0&&v<5000) trail.push(v);
-        }
-        if(trail.length>=3){ d.stk=trail[trail.length-3]; d.rupt=trail[trail.length-2]; }
-        else if(trail.length===2){ d.stk=trail[0]; d.rupt=trail[1]; }
-        else { d.stk=0; d.rupt=0; }
-        console.log('[parserPerf] Rayon '+num+' récupéré par fusion de lignes ('+ns.length+' valeurs)');
-        break; // fusion réussie, pas besoin d'essayer la suivante
-      }
-    }
-  }
 }
 
 // ═══════════════════════════════════════════════════
@@ -389,7 +375,9 @@ function parserPerf(txt){
 function parserRayons(txt){
   txt.split('\n').forEach(function(ligne){
     ligne=ligne.trim(); if(!ligne) return;
-    var numM=ligne.match(/^(10|11|12|14|19|20|21|22|23|24|25|30|31|32|33|34|35|40|41|42|43|44|45|60|61|62|63|64|65|66|67|8X)\s/i);
+    // (?:^|\s) au lieu de ^ : accepte les lignes avec préfixes navigation
+    // ex: "CAJ PREVISIONNEL 11 DROGUERIE..." ou "EXCELLENCE OPERATIONNELLE 14..."
+    var numM=ligne.match(/(?:^|\s)(10|11|12|14|19|20|21|22|23|24|25|30|31|32|33|34|35|40|41|42|43|44|45|60|61|62|63|64|65|66|67|8X)\s/i);
     if(!numM) return;
     var num=numM[1].toUpperCase();
     if(!D[num]||!NOM_PG[num]) return;
@@ -398,8 +386,15 @@ function parserRayons(txt){
     var ns=getNums(ligne);
     if(ns.length<6) return;
 
-    // Point de départ adaptatif pour chercher le rang
-    var start = (ns.length>4 && ns[4]>0) ? 6 : 4;
+    // Point de départ adaptatif pour chercher le rang :
+    // Si ns[4] est un entier valide dans [1,300] → c'est directement le rang (ex: rayon 67)
+    // Sinon si ns[4]>0 → c'est CA_ECOM → le rang est plus loin (start=6)
+    var start;
+    if(ns.length>4 && ns[4]>0 && !(ns[4]===Math.round(ns[4]) && ns[4]>=1 && ns[4]<=300)){
+      start=6; // ns[4] est CA_ECOM, rang après
+    } else {
+      start=4; // ns[4] est le rang directement ou est 0
+    }
 
     var rang=0, er=0;
     for(var i=start; i<ns.length-1; i++){
@@ -428,7 +423,7 @@ var MAP_COMPAR=[
   [/CHARCUT/i,"20"],[/POISSONNERIE/i,"21"],[/FRUITS\s+ET\s+LEGUMES/i,"22"],
   [/BOULANGERIE/i,"23"],[/BOUCHERIE/i,"24"],[/P\.?L\.?S/i,"25"],
   // Bazar
-  [/BRICOLAGE/i,"30"],[/\bCONFORT\b/i,"31"],[/PAPETERIE/i,"32"],
+  [/BRICOLAGE/i,"30"],[/CONFORT/i,"31"],[/PAPETERIE/i,"32"],
   [/JOUET/i,"33"],[/JARDIN/i,"34"],[/\bAUTO\b/i,"35"],[/CULTURE/i,"8X"],
   // EPCS
   [/\bGEM\b/i,"40"],[/\bPEM\b/i,"41"],[/PHOTO\s+COMMUNICATION/i,"42"],
@@ -653,7 +648,7 @@ var MSG_POS=[
 ];
 var MSG_NEG=[
   {t:"Point d'amélioration :",s:"Les stocks négatifs sont à corriger en priorité pour fiabiliser les commandes automatiques."},
-  {t:"Point d'amélioration :",s:"Les ruptures catalogue pénalisent le CA — chasse aux trous et commande 1 carton pour chaque référence manquante."},
+  {t:"Point d'amélioration :",s:"Les ruptures assortiment pénalisent le CA — chasse aux trous et commande 1 carton pour chaque référence manquante."},
   {t:"Point d'amélioration :",s:"Le chiffre d'affaires est en recul — renforcer le facing et la disponibilité produit pour limiter la perte."},
   {t:"Point d'amélioration :",s:"La marge est sous pression — contrôler les prix d'achat et limiter les démarques non justifiées."},
   {t:"Point d'amélioration :",s:"L'écart au budget persiste — chaque vente compte pour rattraper le retard."}
@@ -676,6 +671,16 @@ function buildClosing(d){
 // ═══════════════════════════════════════════════════
 // GÉNÉRATION DU BRIEF
 // ═══════════════════════════════════════════════════
+function onSel(){
+  rayonK=document.getElementById('sel').value||null;
+  document.getElementById('btn-edt').disabled=!rayonK;
+  verifierCorrespondanceRayon(); // vérifier si le bouton région doit être actif
+  var rs=document.getElementById('reg-s');
+  if(rs) rs.style.display='none';
+}
+
+function sg(v){return v>=0?'up':'dn';}
+
 function onSel(){
   var v=document.getElementById('sel').value||null;
   rayonK=(v==='ALIMENTAIRE'||v==='NON_ALIMENTAIRE')?null:v;
@@ -758,24 +763,15 @@ function genBriefGlobal(type){
   depts.forEach(function(dept){
     // Agréger les données du département
     var dCA=0,dBud=0,dRupt=0,dStk=0,dEv=0,dTaux=0,dDm=0,dRang=0,dEr=0,n=0;
-    var nEv=0,nTaux=0,nDm=0,nRang=0,nEr=0;
     dept.rayons.forEach(function(k){
       var d=D[k]||{};
       dCA+=d.ca||0; dBud+=d.bud||0; dRupt+=d.rupt||0; dStk+=d.stk||0;
-      n++;
-      // Moyennes : uniquement les rayons ayant des données réelles (non zéro)
-      if(d.ev!==0){dEv+=d.ev||0; nEv++;}
-      if(d.taux!==0){dTaux+=d.taux||0; nTaux++;}
-      if(d.dm!==0){dDm+=d.dm||0; nDm++;}
-      if(d.rang!==0){dRang+=d.rang||0; nRang++;}
-      if(d.er!==0){dEr+=d.er||0; nEr++;}
+      dEv+=d.ev||0; dTaux+=d.taux||0; dDm+=d.dm||0;
+      dRang+=d.rang||0; dEr+=d.er||0; n++;
     });
     var nb=n||1;
-    dEv=nEv>0?dEv/nEv:0;
-    dTaux=nTaux>0?dTaux/nTaux:0;
-    dDm=nDm>0?dDm/nDm:0;
-    dRang=nRang>0?Math.round(dRang/nRang):0;
-    dEr=nEr>0?Math.round(dEr/nEr):0;
+    dEv=dEv/nb; dTaux=dTaux/nb; dDm=dDm/nb;
+    dRang=Math.round(dRang/nb); dEr=Math.round(dEr/nb);
 
     // Ligne département (fond gris, gras)
     var dcEv=dEv>=0?'color:#16a34a':'color:#dc2626';
@@ -871,8 +867,8 @@ function genBrief(){
   var al=[];
   if(d.stk>20)     al.push({t:'bad',l:'⚠ '+d.stk+' stocks négatifs'});
   else if(d.stk>0) al.push({t:'warn',l:d.stk+' stocks négatifs'});
-  if(d.rupt>50)     al.push({t:'bad',l:'⚠ '+d.rupt+' ruptures catalogue'});
-  else if(d.rupt>0) al.push({t:'warn',l:d.rupt+' ruptures catalogue'});
+  if(d.rupt>50)     al.push({t:'bad',l:'⚠ '+d.rupt+' ruptures assortiment'});
+  else if(d.rupt>0) al.push({t:'warn',l:d.rupt+' ruptures assortiment'});
   if(d.ev<-15)  al.push({t:'bad',l:'CA en forte baisse ('+(d.ev>=0?'+':'')+d.ev.toFixed(1)+'%)'});
   if(d.dm<-3)   al.push({t:'bad',l:'Marge en recul ('+(d.dm>=0?'+':'')+d.dm.toFixed(2)+' pts)'});
   if(d.dm>2)    al.push({t:'good',l:'✓ Marge en progression (+'+d.dm.toFixed(2)+' pts)'});
